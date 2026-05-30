@@ -10,7 +10,7 @@
 import { test, expect, Page } from '@playwright/test';
 import { loginAsTestUser, hasTestCredentials } from './helpers/auth';
 
-const PHASE2_IMPLEMENTED = false; // flip to true when Phase 2 ships
+const PHASE2_IMPLEMENTED = true;
 
 test.describe('Phase 2 · Bundles', () => {
 

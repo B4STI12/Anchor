@@ -1,4 +1,4 @@
-import { Component, inject, HostListener } from '@angular/core';
+import { Component, inject, HostListener, OnInit } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
 import { TitleCasePipe } from '@angular/common';
 import { SidebarComponent } from '../sidebar/sidebar.component';
@@ -137,11 +137,15 @@ import { NavService } from '../../shared/services/nav.service';
     .content { flex: 1; min-width: 0; background: var(--bg); overflow: hidden; }
   `],
 })
-export class ShellComponent {
+export class ShellComponent implements OnInit {
   electron = inject(ElectronService);
   cp = inject(CommandPaletteService);
   profile = inject(ProfileService);
   nav = inject(NavService);
+
+  async ngOnInit(): Promise<void> {
+    await this.profile.load();
+  }
 
   @HostListener('document:keydown', ['$event'])
   onKey(e: KeyboardEvent): void {
