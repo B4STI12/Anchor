@@ -1,0 +1,41 @@
+{
+  "name": "anchor",
+  "version": "0.0.0",
+  "main": "dist-electron/main.js",
+  "scripts": {
+    "ng": "ng",
+    "start": "ng serve",
+    "build": "ng build",
+    "watch": "ng build --watch --configuration development",
+    "electron:compile": "tsc -p tsconfig.electron.json",
+    "electron:watch": "tsc -p tsconfig.electron.json --watch",
+    "dev": "concurrently --kill-others -n ng,electron \"ng serve\" \"wait-on http://localhost:4200 && npm run electron:compile && electron .\"",
+    "electron:start": "npm run electron:compile && electron .",
+    "build:full": "ng build && npm run electron:compile",
+    "dist": "npm run build:full && electron-builder"
+  },
+  "private": true,
+  "packageManager": "npm@11.15.0",
+  "dependencies": {
+    "@angular/common": "^21.2.0",
+    "@angular/compiler": "^21.2.0",
+    "@angular/core": "^21.2.0",
+    "@angular/forms": "^21.2.0",
+    "@angular/platform-browser": "^21.2.0",
+    "@angular/router": "^21.2.0",
+    "@supabase/supabase-js": "^2.106.2",
+    "rxjs": "~7.8.0",
+    "tslib": "^2.3.0"
+  },
+  "devDependencies": {
+    "@angular/build": "^21.2.13",
+    "@angular/cli": "^21.2.13",
+    "@angular/compiler-cli": "^21.2.0",
+    "concurrently": "^10.0.0",
+    "electron": "^42.3.0",
+    "electron-builder": "^26.8.1",
+    "prettier": "^3.8.1",
+    "typescript": "~5.9.2",
+    "wait-on": "^9.0.10"
+  }
+}

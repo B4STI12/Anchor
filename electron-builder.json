@@ -1,0 +1,23 @@
+{
+  "appId": "com.anchor.app",
+  "productName": "Anchor",
+  "directories": {
+    "output": "release"
+  },
+  "files": [
+    "dist/anchor/browser/**/*",
+    "dist-electron/**/*"
+  ],
+  "extraResources": [],
+  "win": {
+    "target": "nsis",
+    "icon": "public/favicon.ico"
+  },
+  "mac": {
+    "target": "dmg",
+    "category": "public.app-category.productivity"
+  },
+  "linux": {
+    "target": "AppImage"
+  }
+}
