@@ -1,4 +1,4 @@
-import { Injectable, inject, signal } from '@angular/core';
+import { Injectable, inject, signal, effect } from '@angular/core';
 import { SupabaseService } from '../../core/supabase/supabase.service';
 import { ProfileService } from './profile.service';
 
@@ -26,6 +26,14 @@ export class SnippetService {
 
   readonly snippets = this._snippets.asReadonly();
   readonly loading = this._loading.asReadonly();
+
+  constructor() {
+    effect(() => {
+      const id = this.profileService.active().id;
+      if (id) this.load();
+      else this._snippets.set([]);
+    });
+  }
 
   async load(): Promise<void> {
     const profileId = this.profileService.active().id;

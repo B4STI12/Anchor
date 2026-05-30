@@ -1,4 +1,4 @@
-import { Injectable, inject, signal } from '@angular/core';
+import { Injectable, inject, signal, effect } from '@angular/core';
 import { SupabaseService } from '../../core/supabase/supabase.service';
 import { ProfileService } from './profile.service';
 
@@ -29,6 +29,14 @@ export class BundleService {
 
   readonly bundles = this._bundles.asReadonly();
   readonly loading = this._loading.asReadonly();
+
+  constructor() {
+    effect(() => {
+      const id = this.profileService.active().id;
+      if (id) this.loadBundles();
+      else this._bundles.set([]);
+    });
+  }
 
   async loadBundles(): Promise<void> {
     const profileId = this.profileService.active().id;
@@ -87,6 +95,22 @@ export class BundleService {
 
   async deleteLink(id: string): Promise<void> {
     await this.db.client.from('links').delete().eq('id', id);
+  }
+
+  reorderBundlesLocal(bundles: Bundle[]): void {
+    this._bundles.set(bundles);
+  }
+
+  async persistBundleOrder(bundles: Bundle[]): Promise<void> {
+    await Promise.all(
+      bundles.map((b, i) => this.db.client.from('bundles').update({ ord: i }).eq('id', b.id))
+    );
+  }
+
+  async persistLinkOrder(links: Link[]): Promise<void> {
+    await Promise.all(
+      links.map((l, i) => this.db.client.from('links').update({ ord: i }).eq('id', l.id))
+    );
   }
 
   faviconUrl(url: string): string {

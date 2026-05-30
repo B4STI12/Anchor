@@ -1,18 +1,21 @@
 import { Component, inject, HostListener, OnInit } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
+import { NgIf } from '@angular/common';
 import { TitleCasePipe } from '@angular/common';
 import { SidebarComponent } from '../sidebar/sidebar.component';
 import { ToastComponent } from '../../shared/components/toast/toast.component';
 import { CommandPaletteComponent } from '../../shared/components/command-palette/command-palette.component';
+import { CalculatorComponent } from '../../modules/calculator/calculator.component';
 import { ElectronService } from '../../core/electron/electron.service';
 import { CommandPaletteService } from '../../shared/services/command-palette.service';
+import { CalculatorService } from '../../shared/services/calculator.service';
 import { ProfileService } from '../../shared/services/profile.service';
 import { NavService } from '../../shared/services/nav.service';
 
 @Component({
   selector: 'app-shell',
   standalone: true,
-  imports: [RouterOutlet, SidebarComponent, ToastComponent, CommandPaletteComponent, TitleCasePipe],
+  imports: [RouterOutlet, NgIf, SidebarComponent, ToastComponent, CommandPaletteComponent, CalculatorComponent, TitleCasePipe],
   template: `
     <div class="app-frame an-app-in">
 
@@ -58,6 +61,7 @@ import { NavService } from '../../shared/services/nav.service';
 
     <app-toast></app-toast>
     <app-command-palette></app-command-palette>
+    <app-calculator *ngIf="calcService.open()"></app-calculator>
   `,
   styles: [`
     :host { display: block; height: 100vh; background: #05070c; padding: 22px; display: flex; align-items: center; justify-content: center;
@@ -140,6 +144,7 @@ import { NavService } from '../../shared/services/nav.service';
 export class ShellComponent implements OnInit {
   electron = inject(ElectronService);
   cp = inject(CommandPaletteService);
+  calcService = inject(CalculatorService);
   profile = inject(ProfileService);
   nav = inject(NavService);
 

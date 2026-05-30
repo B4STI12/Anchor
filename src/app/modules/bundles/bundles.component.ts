@@ -4,6 +4,7 @@ import {
   NO_ERRORS_SCHEMA,
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { CdkDragDrop, CdkDropList, CdkDrag, moveItemInArray } from '@angular/cdk/drag-drop';
 import { BundleService, Bundle, Link } from '../../shared/services/bundle.service';
 import { ToastService } from '../../shared/services/toast.service';
 import { ElectronService } from '../../core/electron/electron.service';
@@ -15,7 +16,7 @@ const PRESET_COLORS = ['#2563eb','#22c55e','#f59e0b','#a855f7','#ec4899','#ef444
 @Component({
   selector: 'app-bundles',
   standalone: true,
-  imports: [FormsModule],
+  imports: [FormsModule, CdkDropList, CdkDrag],
   schemas: [NO_ERRORS_SCHEMA],
   template: `
 <!-- ───── Bundles view ───── -->
@@ -30,13 +31,17 @@ const PRESET_COLORS = ['#2563eb','#22c55e','#f59e0b','#a855f7','#ec4899','#ef444
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
         </button>
       </div>
-      <div class="list-items">
+      <div class="list-items" cdkDropList (cdkDropListDropped)="onBundleDrop($event)">
         @for (b of bundleService.bundles(); track b.id) {
           <button
+            cdkDrag
             class="list-item"
             [class.active]="activeBundle()?.id === b.id"
             (click)="selectBundle(b)"
           >
+            <span class="drag-indicator cdkDragHandle">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="9" cy="6" r="1"/><circle cx="9" cy="12" r="1"/><circle cx="9" cy="18" r="1"/><circle cx="15" cy="6" r="1"/><circle cx="15" cy="12" r="1"/><circle cx="15" cy="18" r="1"/></svg>
+            </span>
             <span class="dot" [style.background]="b.color"></span>
             <span class="item-name">{{ b.name }}</span>
             @if (activeBundle()?.id === b.id) {
@@ -77,10 +82,10 @@ const PRESET_COLORS = ['#2563eb','#22c55e','#f59e0b','#a855f7','#ec4899','#ef444
             <button class="btn-primary" (click)="openAddLinkModal()">Add first link</button>
           </div>
         } @else {
-          <div class="link-grid">
+          <div class="link-grid" cdkDropList cdkDropListOrientation="mixed" (cdkDropListDropped)="onLinkDrop($event)">
             @for (link of activeLinks(); track link.id) {
-              <div class="link-card" (click)="openInWebview(link)" (contextmenu)="onContextMenu($event, link)">
-                <span class="drag-handle">
+              <div cdkDrag class="link-card" (click)="openInWebview(link)" (contextmenu)="onContextMenu($event, link)">
+                <span class="drag-handle" cdkDragHandle>
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="5" r="1"/><circle cx="9" cy="12" r="1"/><circle cx="9" cy="19" r="1"/><circle cx="15" cy="5" r="1"/><circle cx="15" cy="12" r="1"/><circle cx="15" cy="19" r="1"/></svg>
                 </span>
                 <div class="favicon-wrap">
@@ -269,6 +274,11 @@ const PRESET_COLORS = ['#2563eb','#22c55e','#f59e0b','#a855f7','#ec4899','#ef444
     .item-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .item-count { font-size: 11.5px; color: var(--muted); font-variant-numeric: tabular-nums; }
     .empty-list { font-size: 12.5px; color: var(--muted); padding: 12px 6px; }
+    .drag-indicator { color: var(--muted); opacity: 0; cursor: grab; transition: opacity .12s; flex-shrink: 0; }
+    .list-item:hover .drag-indicator { opacity: .6; }
+    .cdk-drag-preview { background: var(--panel); border: 1px solid var(--accent); border-radius: 9px; box-shadow: 0 12px 40px rgba(0,0,0,.5); }
+    .cdk-drag-placeholder { opacity: .25; }
+    .cdk-drag-animating { transition: transform 180ms ease; }
 
     /* ── Content panel ── */
     .content-panel { flex: 1; display: flex; flex-direction: column; min-width: 0; }
@@ -615,6 +625,22 @@ export class BundlesComponent implements OnInit, AfterViewChecked {
     this.activeLinks.update(ls => ls.filter(l => l.id !== link.id));
     this.contextMenu.set(null);
     this.toast.show('Link deleted');
+  }
+
+  onBundleDrop(event: CdkDragDrop<Bundle[]>): void {
+    if (event.previousIndex === event.currentIndex) return;
+    const bundles = [...this.bundleService.bundles()];
+    moveItemInArray(bundles, event.previousIndex, event.currentIndex);
+    this.bundleService.reorderBundlesLocal(bundles);
+    this.bundleService.persistBundleOrder(bundles);
+  }
+
+  onLinkDrop(event: CdkDragDrop<Link[]>): void {
+    if (event.previousIndex === event.currentIndex) return;
+    const links = [...this.activeLinks()];
+    moveItemInArray(links, event.previousIndex, event.currentIndex);
+    this.activeLinks.set(links);
+    this.bundleService.persistLinkOrder(links);
   }
 
   @HostListener('document:click')

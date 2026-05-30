@@ -4,6 +4,7 @@ import { Router } from '@angular/router';
 import { ProfileService, Profile } from '../../shared/services/profile.service';
 import { ToastService } from '../../shared/services/toast.service';
 import { NavService, Screen } from '../../shared/services/nav.service';
+import { CalculatorService } from '../../shared/services/calculator.service';
 
 @Component({
   selector: 'app-sidebar',
@@ -242,6 +243,7 @@ import { NavService, Screen } from '../../shared/services/nav.service';
 export class SidebarComponent {
   profile = inject(ProfileService);
   nav = inject(NavService);
+  calc = inject(CalculatorService);
   private toast = inject(ToastService);
   private router = inject(Router);
 
@@ -263,7 +265,7 @@ export class SidebarComponent {
   }
 
   calcToggle(): void {
-    this.toast.show('Calculator overlay (coming in Phase 4)');
+    this.calc.toggle();
   }
 
   switchProfile(p: Profile): void {
@@ -278,6 +280,7 @@ export class SidebarComponent {
     if      (mod && e.key === '1') { e.preventDefault(); this.navigate('bundles'); }
     else if (mod && e.key === '2') { e.preventDefault(); this.navigate('notes'); }
     else if (mod && e.key === '3') { e.preventDefault(); this.navigate('snippets'); }
+    else if (mod && e.key === '4') { e.preventDefault(); this.calc.toggle(); }
     else if (mod && e.key === ',') { e.preventDefault(); this.navigate('settings'); }
   }
 

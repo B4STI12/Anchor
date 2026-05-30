@@ -4,7 +4,7 @@
 import { test, expect, Page } from '@playwright/test';
 import { loginAsTestUser, hasTestCredentials } from './helpers/auth';
 
-const PHASE4_IMPLEMENTED = false;
+const PHASE4_IMPLEMENTED = true;
 
 test.describe('Phase 4 · Calculator', () => {
 
