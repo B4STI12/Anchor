@@ -6,6 +6,8 @@ import { test, expect } from '@playwright/test';
 import { TEST_EMAIL, TEST_PASSWORD, hasTestCredentials } from './helpers/auth';
 
 test.describe('Phase 1 · Login page', () => {
+  // Run unauthenticated — no storageState so auth guard redirects work correctly
+  test.use({ storageState: { cookies: [], origins: [] } });
 
   test.beforeEach(async ({ page }) => {
     await page.goto('/#/login');

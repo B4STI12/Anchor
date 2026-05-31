@@ -8,11 +8,13 @@ export default defineConfig({
   timeout: 30_000,
   expect: { timeout: 8_000 },
   reporter: [['list'], ['html', { outputFolder: 'tests/report', open: 'never' }]],
+  globalSetup: './tests/e2e/global-setup.ts',
 
   use: {
     baseURL: 'http://localhost:4201',
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
+    storageState: 'tests/e2e/.auth/state.json',
   },
 
   projects: [
