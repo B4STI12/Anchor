@@ -10,7 +10,7 @@ export default defineConfig({
   reporter: [['list'], ['html', { outputFolder: 'tests/report', open: 'never' }]],
 
   use: {
-    baseURL: 'http://localhost:4200',
+    baseURL: 'http://localhost:4201',
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
   },
@@ -20,11 +20,9 @@ export default defineConfig({
   ],
 
   webServer: {
-    command: 'npx ng serve --port 4200',
-    url: 'http://localhost:4200',
-    reuseExistingServer: true,
-    timeout: 90_000,
-    stdout: 'ignore',
-    stderr: 'ignore',
+    command: 'npx ng serve --port 4201',
+    url: 'http://localhost:4201',
+    reuseExistingServer: false,
+    timeout: 120_000,
   },
 });
