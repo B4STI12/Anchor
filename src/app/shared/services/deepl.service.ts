@@ -10,7 +10,8 @@ export class DeepLService {
     if (!apiKey) return null;
 
     try {
-      const response = await fetch('https://api.deepl.com/v2/write', {
+      const base = apiKey.endsWith(':fx') ? 'https://api-free.deepl.com' : 'https://api.deepl.com';
+      const response = await fetch(`${base}/v2/write`, {
         method: 'POST',
         headers: {
           'Authorization': `DeepL-Auth-Key ${apiKey}`,

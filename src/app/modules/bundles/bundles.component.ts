@@ -157,10 +157,11 @@ const PRESET_COLORS = ['#2563eb','#22c55e','#f59e0b','#a855f7','#ec4899','#ef444
       <div class="wv-loadbar an-webloader"></div>
     }
 
-    @if (electronService.isElectron) {
-      <webview #wv class="webview" [attr.src]="webviewSrc()"></webview>
-    } @else {
-      <div class="wv-fallback">
+    <div class="wv-body">
+      @if (electronService.isElectron) {
+        <webview #wv class="webview" [attr.src]="webviewSrc()"></webview>
+      } @else {
+        <div class="wv-fallback">
         <div class="wv-fallback-icon">
           <img [src]="bundleService.faviconUrl(webviewSrc())" [alt]="openedLink()?.label || ''"
                onerror="this.style.display='none'" style="width:64px;height:64px;border-radius:16px" />
@@ -169,7 +170,8 @@ const PRESET_COLORS = ['#2563eb','#22c55e','#f59e0b','#a855f7','#ec4899','#ef444
         <div class="wv-fallback-url">{{ webviewSrc() }}</div>
         <div class="wv-fallback-note">Webview requires the Electron desktop app</div>
       </div>
-    }
+      }
+    </div>
   </div>
 }
 
@@ -440,10 +442,12 @@ const PRESET_COLORS = ['#2563eb','#22c55e','#f59e0b','#a855f7','#ec4899','#ef444
       height: 2px; background: linear-gradient(90deg, transparent, var(--accent2), transparent);
       width: 40%; animation: webload 1.4s ease-in-out infinite;
     }
-    webview { flex: 1; width: 100%; display: block; }
+    .wv-body { flex: 1; position: relative; min-height: 0; }
+    webview { position: absolute; top: 0; left: 0; right: 0; bottom: 0; }
 
     .wv-fallback {
-      flex: 1; display: flex; flex-direction: column;
+      position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+      display: flex; flex-direction: column;
       align-items: center; justify-content: center; gap: 16px;
       background: radial-gradient(120% 80% at 50% 0%, #11151f, #0a0c12);
       color: var(--muted);

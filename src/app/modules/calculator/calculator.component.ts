@@ -17,6 +17,8 @@ import { CalculatorService, HistoryEntry } from '../../shared/services/calculato
       <!-- Header -->
       <div class="calc-header">
         <span class="calc-title">Calculator</span>
+        <button class="sci-toggle" [class.on]="sci()" title="Scientific mode"
+                (click)="sci.set(!sci())" (mousedown)="$event.stopPropagation()">f(x)</button>
         <button class="calc-close" title="Close" (click)="cs.hide()" (mousedown)="$event.stopPropagation()">×</button>
       </div>
 
@@ -25,6 +27,16 @@ import { CalculatorService, HistoryEntry } from '../../shared/services/calculato
         <div class="calc-expr" [innerHTML]="expr() || '&nbsp;'"></div>
         <div class="calc-display">{{ display() }}</div>
       </div>
+
+      <!-- Scientific row -->
+      @if (sci()) {
+        <div class="calc-grid sci-grid" (mousedown)="$event.stopPropagation()">
+          <button class="calc-key fn-key" (click)="negate()">±</button>
+          <button class="calc-key fn-key" (click)="percent()">%</button>
+          <button class="calc-key fn-key" (click)="sqrt()">√</button>
+          <button class="calc-key fn-key" (click)="square()">x²</button>
+        </div>
+      }
 
       <!-- Keypad -->
       <div class="calc-grid" (mousedown)="$event.stopPropagation()">
@@ -95,6 +107,22 @@ import { CalculatorService, HistoryEntry } from '../../shared/services/calculato
     }
     .calc-header:active { cursor: grabbing; }
     .calc-title { font-size: 11px; font-weight: 600; color: var(--muted); letter-spacing: .4px; text-transform: uppercase; }
+
+    .sci-toggle {
+      margin-left: auto;
+      height: 22px; padding: 0 8px; border-radius: 6px;
+      border: 1px solid var(--border); background: transparent;
+      color: var(--muted); cursor: pointer;
+      font-size: 11px; font-weight: 600; font-family: var(--mono);
+      transition: background .12s, color .12s, border-color .12s;
+    }
+    .sci-toggle:hover { background: var(--hover); color: var(--text); }
+    .sci-toggle.on { background: rgba(37,99,235,.18); border-color: rgba(37,99,235,.4); color: var(--accent2); }
+
+    .sci-grid {
+      padding: 6px 10px 2px;
+      border-bottom: 1px solid var(--border);
+    }
 
     .calc-close {
       width: 22px; height: 22px;
@@ -197,6 +225,8 @@ export class CalculatorComponent implements OnInit, OnDestroy {
   readonly expr = this._expr.asReadonly();
   readonly history = this.cs.history;
 
+  sci = signal(false);
+
   private _posX = signal(80);
   private _posY = signal(120);
   readonly posX = this._posX.asReadonly();
@@ -284,6 +314,43 @@ export class CalculatorComponent implements OnInit, OnDestroy {
     if (this._justCalc()) { this.clear(); return; }
     const cur = this._display();
     this._display.set(cur.length > 1 ? cur.slice(0, -1) : '0');
+  }
+
+  negate(): void {
+    const v = parseFloat(this._display());
+    if (!isNaN(v)) this._display.set(this.fmt(-v));
+  }
+
+  percent(): void {
+    const v = parseFloat(this._display());
+    if (isNaN(v)) return;
+    const result = this._operand() !== null && this._pendingOp()
+      ? (this._operand()! * v) / 100
+      : v / 100;
+    this._display.set(this.fmt(result));
+    this._justCalc.set(true);
+  }
+
+  sqrt(): void {
+    const v = parseFloat(this._display());
+    if (isNaN(v) || v < 0) return;
+    const result = Math.sqrt(v);
+    const rs = this.fmt(result);
+    this._expr.set(`√${v}`);
+    this._display.set(rs);
+    this.pushHistory(`√${v}`, rs);
+    this._operand.set(null); this._pendingOp.set(null); this._justCalc.set(true);
+  }
+
+  square(): void {
+    const v = parseFloat(this._display());
+    if (isNaN(v)) return;
+    const result = v * v;
+    const rs = this.fmt(result);
+    this._expr.set(`${v}²`);
+    this._display.set(rs);
+    this.pushHistory(`${v}²`, rs);
+    this._operand.set(null); this._pendingOp.set(null); this._justCalc.set(true);
   }
 
   restoreResult(result: string): void {

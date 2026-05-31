@@ -449,7 +449,8 @@ export class SettingsComponent implements OnInit {
   async testDeepL(): Promise<void> {
     this.deeplStatus.set('Testing…');
     try {
-      const res = await fetch('https://api.deepl.com/v2/translate', {
+      const base = this.deeplKey.endsWith(':fx') ? 'https://api-free.deepl.com' : 'https://api.deepl.com';
+      const res = await fetch(`${base}/v2/translate`, {
         method: 'POST',
         headers: { Authorization: `DeepL-Auth-Key ${this.deeplKey}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({ text: ['Hello'], target_lang: 'DE' }),

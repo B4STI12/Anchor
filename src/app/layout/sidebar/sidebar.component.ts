@@ -1,5 +1,6 @@
 import { Component, inject, signal, HostListener } from '@angular/core';
 import { NgFor, NgIf } from '@angular/common';
+import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import { Router } from '@angular/router';
 import { ProfileService, Profile } from '../../shared/services/profile.service';
 import { ToastService } from '../../shared/services/toast.service';
@@ -52,7 +53,7 @@ import { CalculatorService } from '../../shared/services/calculator.service';
             (click)="navigate(item.screen)"
           >
             <div class="active-bar" *ngIf="nav.screen() === item.screen"></div>
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" [innerHTML]="item.paths"></svg>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" [innerHTML]="safePaths(item.paths)"></svg>
             <div class="tooltip">{{ item.label }} <span class="badge">{{ item.shortcut }}</span></div>
           </button>
         </div>
@@ -246,6 +247,11 @@ export class SidebarComponent {
   calc = inject(CalculatorService);
   private toast = inject(ToastService);
   private router = inject(Router);
+  private sanitizer = inject(DomSanitizer);
+
+  safePaths(html: string): SafeHtml {
+    return this.sanitizer.bypassSecurityTrustHtml(html);
+  }
 
   profileOpen = signal(false);
 
