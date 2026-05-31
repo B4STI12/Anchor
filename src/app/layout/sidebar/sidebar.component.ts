@@ -73,14 +73,15 @@ import { CalculatorService } from '../../shared/services/calculator.service';
 
       <div class="divider-line"></div>
 
-      <!-- Disabled items -->
+      <!-- Email -->
       <div class="nav-group">
         <div class="nav-item-wrap">
-          <button class="nav-btn disabled" disabled title="Email">
+          <button class="nav-btn" [class.active]="nav.screen() === 'email'" (click)="navigate('email')" title="Email">
+            <div class="active-bar" *ngIf="nav.screen() === 'email'"></div>
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
               <rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/>
             </svg>
-            <div class="tooltip">Email <span class="badge">coming soon</span></div>
+            <div class="tooltip">Email <span class="badge">⌘5</span></div>
           </button>
         </div>
         <div class="nav-item-wrap">
@@ -287,6 +288,7 @@ export class SidebarComponent {
     else if (mod && e.key === '2') { e.preventDefault(); this.navigate('notes'); }
     else if (mod && e.key === '3') { e.preventDefault(); this.navigate('snippets'); }
     else if (mod && e.key === '4') { e.preventDefault(); this.calc.toggle(); }
+    else if (mod && e.key === '5') { e.preventDefault(); this.navigate('email'); }
     else if (mod && e.key === ',') { e.preventDefault(); this.navigate('settings'); }
   }
 
