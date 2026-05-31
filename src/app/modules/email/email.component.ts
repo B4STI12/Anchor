@@ -416,83 +416,84 @@ function getSnoozePresets(): { id: string; label: string; hint: string; ts: numb
         }
       </div>
 
-      <!-- Compose modal -->
-      @if (composeOpen()) {
-        <div class="compose-backdrop" (click)="composeOpen.set(false)"></div>
-        <div class="compose-modal">
-          <div class="compose-header">
-            <span class="compose-title">New message</span>
-            <button class="btn-icon" (click)="composeOpen.set(false)">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-            </button>
-          </div>
-          <div class="compose-fields">
-            <div class="field-row">
-              <span class="field-label">From</span>
-              <select class="field-select" [(ngModel)]="composeFrom">
-                @for (a of accounts(); track a.id) {
-                  <option [value]="a.id">{{ a.email }}</option>
-                }
-              </select>
-            </div>
-            <div class="field-row">
-              <span class="field-label">To</span>
-              <input class="field-input" [(ngModel)]="composeTo" placeholder="someone@example.com (comma-separated)" />
-            </div>
-            <div class="field-row">
-              <span class="field-label">Cc</span>
-              <input class="field-input" [(ngModel)]="composeCc" placeholder="optional" />
-            </div>
-            <div class="field-row">
-              <span class="field-label">Subject</span>
-              <input class="field-input" [(ngModel)]="composeSubject" placeholder="What's this about?" />
-            </div>
-          </div>
-          <textarea class="compose-body" [(ngModel)]="composeBody" placeholder="Write your message…"></textarea>
-          @if (composeError()) {
-            <div class="error-text px-16">{{ composeError() }}</div>
-          }
-          <div class="compose-footer">
-            <button class="btn-primary" (click)="doSend()" [disabled]="composeSending()">
-              {{ composeSending() ? 'Sending…' : 'Send' }}
-            </button>
-            <button class="btn-ghost" (click)="composeOpen.set(false)">Discard</button>
-          </div>
-        </div>
-      }
-
-      <!-- QuickClean modal -->
-      @if (quickCleanOpen()) {
-        <div class="compose-backdrop" (click)="quickCleanOpen.set(false)"></div>
-        <div class="quickclean-modal">
-          <div class="compose-header">
-            <span class="compose-title">QuickClean</span>
-            <button class="btn-icon" (click)="quickCleanOpen.set(false)">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-            </button>
-          </div>
-          <p class="muted-text px-16">Delete all emails from these top senders at once.</p>
-          @if (qcLoading()) {
-            <div class="state-center"><div class="spinner"></div></div>
-          } @else if (qcCandidates().length === 0) {
-            <div class="state-center"><span class="muted-text">Inbox is clean!</span></div>
-          } @else {
-            <div class="qc-list">
-              @for (c of qcCandidates(); track c.sender_email) {
-                <div class="qc-row">
-                  <div class="qc-info">
-                    <div class="qc-sender">{{ c.sender_name || c.sender_email }}</div>
-                    <div class="qc-sub muted-text">{{ c.cnt }} emails · {{ c.latest_subject }}</div>
-                  </div>
-                  <button class="btn-action red" (click)="qcDeleteAll(c.sender_email)">Delete all</button>
-                </div>
-              }
-            </div>
-          }
-        </div>
-      }
     }
   </main>
+
+  <!-- Compose modal — rendered outside phase block so it works from any view -->
+  @if (composeOpen()) {
+    <div class="compose-backdrop" (click)="composeOpen.set(false)"></div>
+    <div class="compose-modal">
+      <div class="compose-header">
+        <span class="compose-title">New message</span>
+        <button class="btn-icon" (click)="composeOpen.set(false)">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+      <div class="compose-fields">
+        <div class="field-row">
+          <span class="field-label">From</span>
+          <select class="field-select" [(ngModel)]="composeFrom">
+            @for (a of accounts(); track a.id) {
+              <option [value]="a.id">{{ a.email }}</option>
+            }
+          </select>
+        </div>
+        <div class="field-row">
+          <span class="field-label">To</span>
+          <input class="field-input" [(ngModel)]="composeTo" placeholder="someone@example.com (comma-separated)" />
+        </div>
+        <div class="field-row">
+          <span class="field-label">Cc</span>
+          <input class="field-input" [(ngModel)]="composeCc" placeholder="optional" />
+        </div>
+        <div class="field-row">
+          <span class="field-label">Subject</span>
+          <input class="field-input" [(ngModel)]="composeSubject" placeholder="What's this about?" />
+        </div>
+      </div>
+      <textarea class="compose-body" [(ngModel)]="composeBody" placeholder="Write your message…"></textarea>
+      @if (composeError()) {
+        <div class="error-text px-16">{{ composeError() }}</div>
+      }
+      <div class="compose-footer">
+        <button class="btn-primary" (click)="doSend()" [disabled]="composeSending()">
+          {{ composeSending() ? 'Sending…' : 'Send' }}
+        </button>
+        <button class="btn-ghost" (click)="composeOpen.set(false)">Discard</button>
+      </div>
+    </div>
+  }
+
+  <!-- QuickClean modal — rendered outside phase block -->
+  @if (quickCleanOpen()) {
+    <div class="compose-backdrop" (click)="quickCleanOpen.set(false)"></div>
+    <div class="quickclean-modal">
+      <div class="compose-header">
+        <span class="compose-title">QuickClean</span>
+        <button class="btn-icon" (click)="quickCleanOpen.set(false)">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+      <p class="muted-text px-16">Delete all emails from these top senders at once.</p>
+      @if (qcLoading()) {
+        <div class="state-center"><div class="spinner"></div></div>
+      } @else if (qcCandidates().length === 0) {
+        <div class="state-center"><span class="muted-text">Inbox is clean!</span></div>
+      } @else {
+        <div class="qc-list">
+          @for (c of qcCandidates(); track c.sender_email) {
+            <div class="qc-row">
+              <div class="qc-info">
+                <div class="qc-sender">{{ c.sender_name || c.sender_email }}</div>
+                <div class="qc-sub muted-text">{{ c.cnt }} emails · {{ c.latest_subject }}</div>
+              </div>
+              <button class="btn-action red" (click)="qcDeleteAll(c.sender_email)">Delete all</button>
+            </div>
+          }
+        </div>
+      }
+    </div>
+  }
 </div>
 
 <!-- Reusable email row template -->
