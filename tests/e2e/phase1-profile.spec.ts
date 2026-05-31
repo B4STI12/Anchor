@@ -23,9 +23,22 @@ test.describe('Phase 1 · Profile switcher', () => {
     const { data: { user } } = await sb.auth.getUser();
     if (user) {
       const { data: existing } = await sb.from('profiles').select('id').eq('user_id', user.id);
-      for (const p of existing ?? []) {
-        await sb.from('profiles').delete().eq('id', p.id);
+      const profileIds = (existing ?? []).map((p: any) => p.id);
+
+      if (profileIds.length > 0) {
+        // Cascade-delete dependent data in FK order before deleting profiles
+        const { data: bundlesData } = await sb.from('bundles').select('id').in('profile_id', profileIds);
+        const bundleIds = (bundlesData ?? []).map((b: any) => b.id);
+        if (bundleIds.length > 0) await sb.from('links').delete().in('bundle_id', bundleIds);
+        await sb.from('bundles').delete().in('profile_id', profileIds);
+        await sb.from('snippets').delete().in('profile_id', profileIds);
+        await sb.from('notes').delete().in('profile_id', profileIds);
+        // Nullify self-referential parent_id before deleting folders
+        await sb.from('folders').update({ parent_id: null }).in('profile_id', profileIds);
+        await sb.from('folders').delete().in('profile_id', profileIds);
+        await sb.from('profiles').delete().in('id', profileIds);
       }
+
       // Insert in order: Private first → Work second (ensures correct created_at order)
       await sb.from('profiles').insert({ user_id: user.id, name: 'Private', color: '#2563eb' });
       await new Promise(r => setTimeout(r, 100)); // small gap to guarantee created_at order
@@ -40,8 +53,16 @@ test.describe('Phase 1 · Profile switcher', () => {
   test.afterAll(async () => page.close());
 
   async function openDropdown() {
+    const dropdown = page.locator('.profile-dropdown');
+    // If already open, close it first (button is a toggle — clicking again closes it)
+    if (await dropdown.isVisible()) {
+      await page.mouse.click(500, 400);
+      await expect(dropdown).not.toBeVisible();
+    }
     await page.locator('.profile-btn').click();
-    await expect(page.locator('.profile-dropdown')).toBeVisible();
+    await expect(dropdown).toBeVisible();
+    // Wait for profile items to load from Supabase
+    await page.locator('.profile-dropdown .dropdown-item').first().waitFor({ state: 'visible', timeout: 5_000 });
   }
 
   // ── Dropdown ─────────────────────────────────────────────────────────────
@@ -92,22 +113,24 @@ test.describe('Phase 1 · Profile switcher', () => {
   });
 
   test('switching profile shows toast "Switched to Work profile"', async () => {
-    // Switch back to Private first to reset state
+    // Switch back to Private first, then wait for that toast to clear
     await openDropdown();
     await page.locator('.dropdown-item .item-name:text("Private")').click();
-    await page.waitForTimeout(100);
+    await expect(page.locator('.toast').first()).not.toBeVisible({ timeout: 4_000 });
 
     await openDropdown();
     await page.locator('.dropdown-item .item-name:text("Work")').click();
-    await expect(page.locator('.toast')).toContainText('Switched to Work profile', { timeout: 3_000 });
+    await expect(page.locator('.toast').first()).toContainText('Switched to Work profile', { timeout: 3_000 });
   });
 
   test('toast disappears after ~2.2s', async () => {
-    // Trigger a switch to ensure a toast is shown
+    // Wait for any lingering toasts from the previous test to clear first
+    await expect(page.locator('.toast').first()).not.toBeVisible({ timeout: 4_000 });
+
     await openDropdown();
     await page.locator('.dropdown-item .item-name:text("Private")').click();
-    await expect(page.locator('.toast')).toBeVisible({ timeout: 3_000 });
-    await expect(page.locator('.toast')).not.toBeVisible({ timeout: 4_000 });
+    await expect(page.locator('.toast').first()).toBeVisible({ timeout: 3_000 });
+    await expect(page.locator('.toast').first()).not.toBeVisible({ timeout: 4_000 });
   });
 
   test('dropdown closes after switching profile', async () => {
