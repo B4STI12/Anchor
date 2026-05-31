@@ -73,6 +73,10 @@ export async function loginAsTestUser(page: Page): Promise<void> {
   await page.locator('input[name="password"]').fill(TEST_PASSWORD);
   await page.locator('button[type="submit"]').click();
   await page.waitForURL(/\/#\/app/, { timeout: 60_000 });
+  // Wait for the initial Supabase fetches (profile load, bundle list) to settle.
+  // ShellComponent.ngOnInit() calls profile.load() async — without this wait,
+  // profileService.active().id is still '' (falsy) and create() calls silently fail.
+  await page.waitForLoadState('networkidle', { timeout: 20_000 });
 }
 
 /** Skip a test if TEST_EMAIL / TEST_PASSWORD are not configured. */

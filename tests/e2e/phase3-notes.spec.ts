@@ -43,7 +43,7 @@ test.describe('Phase 3 · Notes', () => {
     // Both ".list-empty" (no notes) and ".note-item" (existing notes) only
     // appear after loading completes.
     await page.locator('.list-empty, .note-item').first()
-      .waitFor({ state: 'visible', timeout: 8_000 });
+      .waitFor({ state: 'visible', timeout: 20_000 });
 
     // ── Seed test data ────────────────────────────────────────────────────────
 
@@ -53,14 +53,14 @@ test.describe('Phase 3 · Notes', () => {
     await page.locator('.modal-input').fill('Test Folder');
     await page.locator('.btn-primary').click();
     await page.locator('.folder-item:not(.root-item)').first()
-      .waitFor({ state: 'visible', timeout: 8_000 });
+      .waitFor({ state: 'visible', timeout: 20_000 });
 
     // Create a note and wait for it to open in the editor.
     // Use the toolbar button — more reliable than Ctrl+N (keyboard handler is
     // blocked when an INPUT has focus after the modal closes).
     await page.locator('button[title="New note"]').click();
-    await page.locator('.note-item').first().waitFor({ state: 'visible', timeout: 8_000 });
-    await page.locator('.ProseMirror').waitFor({ state: 'visible', timeout: 8_000 });
+    await page.locator('.note-item').first().waitFor({ state: 'visible', timeout: 20_000 });
+    await page.locator('.ProseMirror').waitFor({ state: 'visible', timeout: 20_000 });
 
     // Type content so .note-preview is non-empty after auto-save.
     // NoteService.updateNote signals update AFTER the DB write, so the preview
