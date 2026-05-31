@@ -1,6 +1,7 @@
 import { Component, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { NgIf } from '@angular/common';
+import { Router } from '@angular/router';
 import { AuthService } from '../auth.service';
 
 @Component({
@@ -58,6 +59,7 @@ import { AuthService } from '../auth.service';
             <span *ngIf="loading()">Signing in…</span>
           </button>
         </form>
+        <p class="signup-hint">New to Anchor? <a class="link" (click)="router.navigate(['/onboarding'])">Create an account</a></p>
       </div>
     </div>
   `,
@@ -151,10 +153,13 @@ import { AuthService } from '../auth.service';
     }
     .btn-primary:hover:not(:disabled) { opacity: .88; }
     .btn-primary:disabled { opacity: .5; cursor: not-allowed; }
+    .signup-hint { font-size: 13px; color: var(--muted); text-align: center; margin: 16px 0 0; }
+    .link { color: var(--accent2); cursor: pointer; text-decoration: underline; }
   `],
 })
 export class LoginComponent {
   private auth = inject(AuthService);
+  router = inject(Router);
 
   email = '';
   password = '';

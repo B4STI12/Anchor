@@ -29,6 +29,13 @@ export class AuthService {
     return null;
   }
 
+  async signUp(email: string, password: string): Promise<string | null> {
+    const { error } = await this.supabase.client.auth.signUp({ email, password });
+    if (error) return error.message;
+    // signUp auto-signs-in in Supabase (no email confirmation by default)
+    return null;
+  }
+
   async changePassword(newPassword: string): Promise<string | null> {
     const { error } = await this.supabase.client.auth.updateUser({ password: newPassword });
     return error?.message ?? null;

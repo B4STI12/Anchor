@@ -4,6 +4,11 @@ import { authGuard } from './core/auth/auth.guard';
 export const routes: Routes = [
   { path: '', redirectTo: '/login', pathMatch: 'full' },
   {
+    path: 'onboarding',
+    loadComponent: () =>
+      import('./modules/onboarding/onboarding.component').then(m => m.OnboardingComponent),
+  },
+  {
     path: 'login',
     loadComponent: () =>
       import('./core/auth/login/login.component').then(m => m.LoginComponent),
