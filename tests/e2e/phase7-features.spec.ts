@@ -18,13 +18,21 @@ test.describe('Phase 7 — New Features', () => {
     test('clicking theme toggle adds .light class to html', async ({ page }) => {
       await page.keyboard.press('Control+,');
       await page.waitForSelector('text=Light mode', { timeout: 8000 });
-      const toggle = page.locator('label.toggle input[type="checkbox"]').last();
-      const wasChecked = await toggle.isChecked();
-      await toggle.click({ force: true });
+      // The input is display:none — click the visible label element instead
+      const toggleLabel = page.locator('label.toggle').last();
+      const wasChecked = await toggleLabel.locator('input[type="checkbox"]').isChecked();
+      await toggleLabel.click();
+      // Wait for Angular's ngModelChange to apply the class to <html>
+      await page.waitForFunction(
+        (expected: boolean) => document.documentElement.classList.contains('light') === expected,
+        !wasChecked,
+        { timeout: 5000 }
+      );
       const isLight = await page.evaluate(() => document.documentElement.classList.contains('light'));
       expect(isLight).toBe(!wasChecked);
-      // Restore
-      await toggle.click({ force: true });
+      // Restore original state
+      await toggleLabel.click();
+      await page.waitForTimeout(300);
     });
   });
 
@@ -56,6 +64,10 @@ test.describe('Phase 7 — New Features', () => {
     test.beforeEach(async ({ page }) => {
       await page.keyboard.press('Control+2');
       await page.waitForSelector('.notes-root', { timeout: 10000 });
+      // Wait for NoteService to finish loading (profile must be ready).
+      // Without this, createNote() sees profileId='' and returns null early.
+      await page.locator('.list-empty, .note-item').first()
+        .waitFor({ state: 'visible', timeout: 20_000 });
     });
 
     test('new-from-template dropdown button is visible in note list header', async ({ page }) => {
@@ -82,19 +94,15 @@ test.describe('Phase 7 — New Features', () => {
     test('meeting notes template populates editor with heading', async ({ page }) => {
       await page.locator('button.tmpl-btn').click();
       await page.locator('.template-menu button', { hasText: 'Meeting notes' }).click();
-      await page.waitForSelector('.ProseMirror', { timeout: 10000 });
-      const editorContent = await page.locator('.ProseMirror').textContent();
-      expect(editorContent).toContain('Meeting Notes');
-      expect(editorContent).toContain('Agenda');
+      await expect(page.locator('.ProseMirror')).toContainText('Meeting Notes', { timeout: 12000 });
+      await expect(page.locator('.ProseMirror')).toContainText('Agenda', { timeout: 8000 });
     });
 
     test('daily log template populates editor with todays date heading', async ({ page }) => {
       await page.locator('button.tmpl-btn').click();
       await page.locator('.template-menu button', { hasText: 'Daily log' }).click();
-      await page.waitForSelector('.ProseMirror', { timeout: 10000 });
-      const editorContent = await page.locator('.ProseMirror').textContent();
       const year = new Date().getFullYear().toString();
-      expect(editorContent).toContain(year);
+      await expect(page.locator('.ProseMirror')).toContainText(year, { timeout: 8000 });
     });
   });
 
