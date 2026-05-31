@@ -57,6 +57,18 @@ const PRESET_COLORS = ['#2563eb','#22c55e','#f59e0b','#a855f7','#ec4899','#ef444
           <div class="empty-list">Loading…</div>
         }
       </div>
+
+      @if (recentLinks().length > 0) {
+        <div class="recent-section">
+          <div class="recent-label">Recent</div>
+          @for (r of recentLinks(); track r.url) {
+            <button class="recent-item" (click)="openRecentInWebview(r)" [title]="r.url">
+              <img class="recent-fav" [src]="r.favicon" alt="" onerror="this.style.display='none'" />
+              <span class="recent-name">{{ r.label }}</span>
+            </button>
+          }
+        </div>
+      }
     </div>
 
     <!-- Right panel: link grid -->
@@ -151,6 +163,11 @@ const PRESET_COLORS = ['#2563eb','#22c55e','#f59e0b','#a855f7','#ec4899','#ef444
       <button class="nav-btn" title="Open in external browser" (click)="openExternal()">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
       </button>
+      <div class="nav-sep"></div>
+      <button class="nav-btn zoom-btn" title="Zoom out" (click)="zoomOut()">−</button>
+      <span class="zoom-label">{{ (wvZoom() * 100).toFixed(0) }}%</span>
+      <button class="nav-btn zoom-btn" title="Zoom in" (click)="zoomIn()">+</button>
+      <button class="nav-btn zoom-btn" title="Reset zoom" (click)="zoomReset()" [style.opacity]="wvZoom() === 1 ? '.4' : '1'">⟳</button>
     </div>
 
     @if (wvLoading()) {
@@ -327,6 +344,19 @@ const PRESET_COLORS = ['#2563eb','#22c55e','#f59e0b','#a855f7','#ec4899','#ef444
     .item-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .item-count { font-size: 11.5px; color: var(--muted); font-variant-numeric: tabular-nums; }
     .empty-list { font-size: 12.5px; color: var(--muted); padding: 12px 6px; }
+
+    /* Recently visited */
+    .recent-section { margin-top: 10px; border-top: 1px solid var(--border); padding-top: 8px; }
+    .recent-label { font-size: 10.5px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .4px; padding: 0 6px 4px; }
+    .recent-item {
+      display: flex; align-items: center; gap: 8px; width: 100%;
+      padding: 6px 8px; border-radius: 7px; border: none;
+      background: transparent; color: var(--dim); cursor: pointer;
+      font-size: 12.5px; text-align: left; transition: background .12s;
+    }
+    .recent-item:hover { background: var(--hover); color: var(--text); }
+    .recent-fav { width: 16px; height: 16px; border-radius: 4px; flex-shrink: 0; }
+    .recent-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .drag-indicator { color: var(--muted); opacity: 0; cursor: grab; transition: opacity .12s; flex-shrink: 0; }
     .list-item:hover .drag-indicator { opacity: .6; }
     .cdk-drag-preview { background: var(--panel); border: 1px solid var(--accent); border-radius: 9px; box-shadow: 0 12px 40px rgba(0,0,0,.5); }
@@ -437,6 +467,8 @@ const PRESET_COLORS = ['#2563eb','#22c55e','#f59e0b','#a855f7','#ec4899','#ef444
       border-radius: 9px; color: var(--muted);
     }
     .url-text { font-size: 13px; color: var(--dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .zoom-btn { width: 26px !important; font-size: 16px; }
+    .zoom-label { font-size: 11.5px; color: var(--muted); min-width: 34px; text-align: center; }
 
     .wv-loadbar {
       height: 2px; background: linear-gradient(90deg, transparent, var(--accent2), transparent);
@@ -536,6 +568,12 @@ export class BundlesComponent implements OnInit, AfterViewChecked {
   webviewSrc = signal('');
   currentUrl = signal('');
   wvLoading = signal(false);
+  wvZoom = signal(1.0);
+
+  // Recently visited (last 10, stored in localStorage)
+  recentLinks = signal<{ label: string; url: string; favicon: string }[]>(
+    JSON.parse(localStorage.getItem('anchorRecentLinks') ?? '[]')
+  );
 
   // Reachability: linkId → boolean | null (null=checking)
   reachability = signal<Record<string, boolean | null>>({});
@@ -576,7 +614,12 @@ export class BundlesComponent implements OnInit, AfterViewChecked {
     if (this.wvRef && !this.wvListenersAdded) {
       this.wvListenersAdded = true;
       const wv: any = this.wvRef.nativeElement;
-      wv.addEventListener('did-navigate', (e: any) => this.currentUrl.set(e.url));
+      wv.addEventListener('did-navigate', (e: any) => {
+        this.currentUrl.set(e.url);
+        const domain = this.getDomain(e.url);
+        const stored = localStorage.getItem(`anchorZoom:${domain}`);
+        if (stored) { const z = parseFloat(stored); this.wvZoom.set(z); this.applyZoom(z); }
+      });
       wv.addEventListener('did-start-loading', () => this.wvLoading.set(true));
       wv.addEventListener('did-stop-loading', () => this.wvLoading.set(false));
     }
@@ -616,6 +659,65 @@ export class BundlesComponent implements OnInit, AfterViewChecked {
     this.wvLoading.set(true);
     this.wvListenersAdded = false;
     this.view.set('webview');
+    this.addToRecent(link.label, url, this.bundleService.faviconUrl(url));
+    this.restoreZoom(url);
+  }
+
+  openRecentInWebview(r: { label: string; url: string; favicon: string }): void {
+    const fakeLink: Link = { id: r.url, bundle_id: '', label: r.label, url: r.url, favicon: null, ord: 0 };
+    this.openInWebview(fakeLink);
+  }
+
+  private addToRecent(label: string, url: string, favicon: string): void {
+    const MAX = 10;
+    const entry = { label, url, favicon };
+    const current = this.recentLinks().filter(r => r.url !== url);
+    const updated = [entry, ...current].slice(0, MAX);
+    this.recentLinks.set(updated);
+    localStorage.setItem('anchorRecentLinks', JSON.stringify(updated));
+  }
+
+  private getDomain(url: string): string {
+    try { return new URL(url).hostname; } catch { return url; }
+  }
+
+  private restoreZoom(url: string): void {
+    const domain = this.getDomain(url);
+    const stored = localStorage.getItem(`anchorZoom:${domain}`);
+    const zoom = stored ? parseFloat(stored) : 1.0;
+    this.wvZoom.set(zoom);
+    setTimeout(() => this.applyZoom(zoom), 400);
+  }
+
+  private applyZoom(zoom: number): void {
+    const wv: any = this.wvRef?.nativeElement;
+    if (!wv?.setZoomFactor) return;
+    wv.setZoomFactor(zoom);
+  }
+
+  private saveZoom(zoom: number): void {
+    const domain = this.getDomain(this.currentUrl());
+    localStorage.setItem(`anchorZoom:${domain}`, String(zoom));
+  }
+
+  zoomIn(): void {
+    const z = Math.min(3.0, parseFloat((this.wvZoom() + 0.1).toFixed(1)));
+    this.wvZoom.set(z);
+    this.applyZoom(z);
+    this.saveZoom(z);
+  }
+
+  zoomOut(): void {
+    const z = Math.max(0.3, parseFloat((this.wvZoom() - 0.1).toFixed(1)));
+    this.wvZoom.set(z);
+    this.applyZoom(z);
+    this.saveZoom(z);
+  }
+
+  zoomReset(): void {
+    this.wvZoom.set(1.0);
+    this.applyZoom(1.0);
+    this.saveZoom(1.0);
   }
 
   closeWebview(): void {

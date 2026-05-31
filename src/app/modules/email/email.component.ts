@@ -3,6 +3,7 @@ import {
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import { EmailService } from '../../shared/services/email.service';
 import type { EmailRecord, AccountRecord, TemplateRecord } from '../../shared/services/email.service';
 
@@ -404,7 +405,11 @@ function getSnoozePresets(): { id: string; label: string; hint: string; ts: numb
               </div>
 
               <div class="rp-body">
-                <pre class="email-body-text">{{ openEmail_data()!.body }}</pre>
+                @if (emailBodyIsHtml()) {
+                  <div class="email-body-html" [innerHTML]="emailBodySafe()"></div>
+                } @else {
+                  <pre class="email-body-text">{{ openEmail_data()!.body }}</pre>
+                }
 
                 @if (replyMode() !== 'none') {
                   <div class="inline-composer">
@@ -774,6 +779,15 @@ function getSnoozePresets(): { id: string; label: string; hint: string; ts: numb
       margin: 0; font-family: inherit; font-size: 14px; line-height: 1.65;
       color: var(--dim); white-space: pre-wrap; word-break: break-word;
     }
+    .email-body-html {
+      font-size: 14px; line-height: 1.65; color: var(--dim); word-break: break-word;
+    }
+    .email-body-html :where(a) { color: var(--accent2); }
+    .email-body-html :where(img) { max-width: 100%; height: auto; border-radius: 4px; }
+    .email-body-html :where(table) { border-collapse: collapse; width: 100%; max-width: 100%; }
+    .email-body-html :where(td, th) { padding: 4px 8px; border: 1px solid var(--border); font-size: 13px; }
+    .email-body-html :where(blockquote) { border-left: 3px solid var(--border); margin: 8px 0; padding-left: 12px; color: var(--muted); }
+    .email-body-html :where(pre, code) { font-family: var(--mono); font-size: 12px; background: var(--bg); border-radius: 4px; padding: 2px 6px; }
     .rp-footer {
       padding: 12px 18px; border-top: 1px solid var(--border);
       display: flex; gap: 8px; align-items: center; background: var(--panel); flex-shrink: 0;
@@ -928,6 +942,7 @@ function getSnoozePresets(): { id: string; label: string; hint: string; ts: numb
 })
 export class EmailComponent implements OnInit, OnDestroy {
   private emailService = inject(EmailService);
+  private sanitizer = inject(DomSanitizer);
 
   // ─── State ──────────────────────────────────────────────────────────────────
   phase = signal<Phase>('loading');
@@ -1401,6 +1416,16 @@ export class EmailComponent implements OnInit, OnDestroy {
   rpAcct(): AccountRecord | undefined {
     return this.accounts().find(a => a.id === this.openEmail_data()?.account_id);
   }
+
+  emailBodyIsHtml = computed<boolean>(() => {
+    const body = this.openEmail_data()?.body ?? '';
+    return /<[a-z][\s\S]*>/i.test(body);
+  });
+
+  emailBodySafe = computed<SafeHtml>(() => {
+    const body = this.openEmail_data()?.body ?? '';
+    return this.sanitizer.bypassSecurityTrustHtml(body);
+  });
 
   private removeEmailFromList(id: string): void {
     this.inboxEmails.set(this.inboxEmails().filter(e => e.id !== id));

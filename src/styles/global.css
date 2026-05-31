@@ -91,6 +91,24 @@ input::placeholder { color: var(--muted); }
 .an-pop      { animation: popIn .14s ease; }
 .an-webloader { animation: webload 1.4s ease-in-out infinite; }
 
+/* ── Light theme ── */
+html.light {
+  --bg:      #f5f7fa;
+  --panel:   #ffffff;
+  --panel-2: #eef0f5;
+  --rail:    #e4e7ef;
+  --border:  #d5d9e4;
+  --hover:   #eaecf2;
+  --text:    #1a1d2e;
+  --dim:     #4a5168;
+  --muted:   #8891a5;
+  --accent:  #2563eb;
+  --accent2: #3b82f6;
+}
+html.light body { background: #edf0f5; }
+html.light ::-webkit-scrollbar-thumb { background: #bcc0ce; background-clip: content-box; }
+html.light ::-webkit-scrollbar-thumb:hover { background: #9fa5b8; background-clip: content-box; }
+
 /* Common button resets */
 .btn-reset {
   border: none;

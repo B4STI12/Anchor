@@ -9,6 +9,8 @@ import { ToastService } from '../shared/services/toast.service';
 import { BundleService } from '../shared/services/bundle.service';
 import { NoteService } from '../shared/services/note.service';
 import { SnippetService } from '../shared/services/snippet.service';
+import { EmailService } from '../shared/services/email.service';
+import type { RuleRecord, TemplateRecord } from '../shared/services/email.service';
 
 const COLORS = ['#2563eb','#22c55e','#f59e0b','#a855f7','#ec4899','#ef4444','#14b8a6','#f97316'];
 const LOCK_OPTIONS = [
@@ -144,6 +146,100 @@ const LOCK_OPTIONS = [
         </label>
       </div>
       <p class="note" *ngIf="importStatus()">{{ importStatus() }}</p>
+    </section>
+
+    <!-- ── Theme ── -->
+    <section class="section">
+      <h2>Theme</h2>
+      <div class="field-row">
+        <span class="label flex1">Light mode</span>
+        <label class="toggle">
+          <input type="checkbox" [(ngModel)]="lightMode" (ngModelChange)="onThemeChange($event)" />
+          <span class="toggle-track"></span>
+        </label>
+      </div>
+    </section>
+
+    <!-- ── Email ── -->
+    <section class="section">
+      <h2>Email</h2>
+
+      <div class="field-row">
+        <span class="label">Sync</span>
+        <select class="lock-timeout-select" [(ngModel)]="emailSyncFreq" (ngModelChange)="saveEmailSyncFreq($event)">
+          <option value="1m">Every 1 min</option>
+          <option value="5m">Every 5 min</option>
+          <option value="15m">Every 15 min</option>
+          <option value="manual">Manual only</option>
+        </select>
+        <button class="btn-secondary" (click)="emailSyncNow()" [disabled]="emailSyncing()">
+          {{ emailSyncing() ? 'Syncing…' : 'Sync Now' }}
+        </button>
+      </div>
+
+      <div class="subsection-label">OAuth Credentials</div>
+      <div class="cred-grid">
+        <span class="cred-key">Gmail Client ID</span>
+        <input class="field-input" placeholder="….apps.googleusercontent.com" [(ngModel)]="gmailClientId" />
+        <span class="cred-key">Gmail Client Secret</span>
+        <input class="field-input" type="password" placeholder="GOCSPX-…" [(ngModel)]="gmailClientSecret" />
+        <span class="cred-key">Outlook Client ID</span>
+        <input class="field-input" placeholder="xxxxxxxx-xxxx-…" [(ngModel)]="outlookClientId" />
+        <span class="cred-key">Outlook Client Secret</span>
+        <input class="field-input" type="password" [(ngModel)]="outlookClientSecret" />
+      </div>
+      <button class="btn-primary" (click)="saveEmailCreds()" [disabled]="emailCredsSaving()">
+        {{ emailCredsSaving() ? 'Saving…' : 'Save Credentials' }}
+      </button>
+
+      <div class="subsection-label" style="margin-top:12px">Filter Rules</div>
+      <div class="rule-list">
+        @for (r of emailRules(); track r.id) {
+          <div class="rule-row">
+            <span class="rule-pattern">{{ r.pattern }}</span>
+            <span class="rule-cat" [style.color]="catColor(r.category)">{{ r.category }}</span>
+            <button class="icon-btn danger" (click)="removeRule(r.id)">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
+          </div>
+        }
+        @if (emailRules().length === 0) {
+          <p class="note">No rules yet. Emails matching a rule pattern are auto-categorized.</p>
+        }
+      </div>
+      <div class="row-inline" style="margin-top:6px">
+        <input class="field-input" placeholder="Pattern (e.g. @newsletter.com)" [(ngModel)]="newRulePattern" style="flex:1" />
+        <select class="lock-timeout-select" [(ngModel)]="newRuleCategory">
+          <option value="newsletter">Newsletter</option>
+          <option value="spam">Spam</option>
+          <option value="important">Important</option>
+          <option value="receipt">Receipt</option>
+          <option value="other">Other</option>
+        </select>
+        <button class="btn-secondary" (click)="addRule()">Add</button>
+      </div>
+
+      <div class="subsection-label" style="margin-top:12px">Compose Templates</div>
+      <div class="rule-list">
+        @for (t of emailTemplates(); track t.id) {
+          <div class="rule-row">
+            <span class="rule-pattern">{{ t.name }}</span>
+            <button class="icon-btn danger" (click)="removeTemplate(t.id)">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
+          </div>
+        }
+        @if (emailTemplates().length === 0) {
+          <p class="note">No templates yet.</p>
+        }
+      </div>
+      <div class="field-group" style="margin-top:6px">
+        <input class="field-input" placeholder="Template name" [(ngModel)]="newTemplateName" />
+        <textarea class="field-textarea" placeholder="Template body…" [(ngModel)]="newTemplateBody" rows="3"></textarea>
+        <button class="btn-secondary" (click)="addTemplate()">Add Template</button>
+      </div>
+
+      <p class="note" *ngIf="emailStatus()">{{ emailStatus() }}</p>
     </section>
 
     <!-- ── Account ── -->
@@ -312,6 +408,27 @@ const LOCK_OPTIONS = [
       border-radius: 5px; padding: 2px 7px; color: var(--accent2);
     }
 
+    /* Email settings */
+    .subsection-label {
+      font-size: 11px; font-weight: 600; color: var(--muted);
+      text-transform: uppercase; letter-spacing: .35px; margin-bottom: 6px;
+    }
+    .cred-grid { display: grid; grid-template-columns: 140px 1fr; gap: 8px 12px; align-items: center; margin-bottom: 10px; }
+    .cred-key { font-size: 12.5px; color: var(--dim); }
+    .rule-list { display: flex; flex-direction: column; gap: 4px; }
+    .rule-row {
+      display: flex; align-items: center; gap: 8px; padding: 6px 8px;
+      border: 1px solid var(--border); border-radius: 7px; background: var(--panel-2);
+    }
+    .rule-pattern { flex: 1; font-size: 12.5px; font-family: var(--mono); color: var(--text); }
+    .rule-cat { font-size: 11.5px; font-weight: 600; }
+    .field-textarea {
+      width: 100%; border-radius: 8px; border: 1px solid var(--border);
+      background: var(--bg); color: var(--text); font-size: 13px;
+      padding: 8px 12px; outline: none; resize: vertical; font-family: inherit;
+    }
+    .field-textarea:focus { border-color: rgba(37,99,235,.5); }
+
     /* Modal */
     .modal-backdrop {
       position: fixed; inset: 0; z-index: 300;
@@ -345,6 +462,7 @@ export class SettingsComponent implements OnInit {
   private bundles  = inject(BundleService);
   private notes    = inject(NoteService);
   private snippets = inject(SnippetService);
+  private emailSvc = inject(EmailService);
 
   // Password
   pwCurrent = ''; pwNew = ''; pwConfirm = '';
@@ -376,6 +494,25 @@ export class SettingsComponent implements OnInit {
   // Auto-launch
   autoLaunch = false;
 
+  // Theme
+  lightMode = localStorage.getItem('theme') === 'light';
+
+  // Email settings
+  emailSyncFreq = '5m';
+  emailSyncing = signal(false);
+  emailCredsSaving = signal(false);
+  emailStatus = signal<string | null>(null);
+  gmailClientId = '';
+  gmailClientSecret = '';
+  outlookClientId = '';
+  outlookClientSecret = '';
+  emailRules = signal<RuleRecord[]>([]);
+  emailTemplates = signal<TemplateRecord[]>([]);
+  newRulePattern = '';
+  newRuleCategory = 'newsletter';
+  newTemplateName = '';
+  newTemplateBody = '';
+
   async ngOnInit(): Promise<void> {
     // Load DeepL key from OS keychain
     const key = await this.electron.getApiKey('deepl');
@@ -385,6 +522,17 @@ export class SettingsComponent implements OnInit {
     this.supabaseOk.set(!error);
     // Auto-launch state
     this.autoLaunch = await this.electron.getAutoLaunch();
+    // Email settings
+    this.emailSyncFreq = await this.emailSvc.settingsGetSyncFreq();
+    const creds = await this.emailSvc.settingsGetOauthCreds();
+    if (creds) {
+      this.gmailClientId = creds.gmailClientId || '';
+      this.gmailClientSecret = creds.gmailClientSecret || '';
+      this.outlookClientId = creds.outlookClientId || '';
+      this.outlookClientSecret = creds.outlookClientSecret || '';
+    }
+    this.emailRules.set(await this.emailSvc.rulesList());
+    this.emailTemplates.set(await this.emailSvc.templatesList());
   }
 
   // ── Password ─────────────────────────────────────────────────────────────
@@ -472,6 +620,75 @@ export class SettingsComponent implements OnInit {
   async onAutoLaunchChange(enable: boolean): Promise<void> {
     await this.electron.setAutoLaunch(enable);
     this.toast.show(enable ? 'Anchor will launch at login' : 'Auto-launch disabled');
+  }
+
+  // ── Theme ────────────────────────────────────────────────────────────────
+
+  onThemeChange(light: boolean): void {
+    localStorage.setItem('theme', light ? 'light' : 'dark');
+    document.documentElement.classList.toggle('light', light);
+  }
+
+  // ── Email settings ────────────────────────────────────────────────────────
+
+  async saveEmailSyncFreq(v: string): Promise<void> {
+    await this.emailSvc.settingsSetSyncFreq(v);
+    this.toast.show('Sync frequency saved');
+  }
+
+  async emailSyncNow(): Promise<void> {
+    this.emailSyncing.set(true);
+    await this.emailSvc.syncNow();
+    this.emailSyncing.set(false);
+    this.toast.show('Sync complete');
+  }
+
+  async saveEmailCreds(): Promise<void> {
+    this.emailCredsSaving.set(true);
+    await this.emailSvc.settingsSetOauthCreds({
+      gmailClientId: this.gmailClientId,
+      gmailClientSecret: this.gmailClientSecret,
+      outlookClientId: this.outlookClientId,
+      outlookClientSecret: this.outlookClientSecret,
+    });
+    this.emailCredsSaving.set(false);
+    this.toast.show('Email credentials saved');
+  }
+
+  async addRule(): Promise<void> {
+    const pattern = this.newRulePattern.trim();
+    if (!pattern) return;
+    await this.emailSvc.rulesAdd(pattern, this.newRuleCategory);
+    this.emailRules.set(await this.emailSvc.rulesList());
+    this.newRulePattern = '';
+  }
+
+  async removeRule(id: number): Promise<void> {
+    await this.emailSvc.rulesRemove(id);
+    this.emailRules.set(await this.emailSvc.rulesList());
+  }
+
+  async addTemplate(): Promise<void> {
+    const name = this.newTemplateName.trim();
+    const body = this.newTemplateBody.trim();
+    if (!name || !body) return;
+    await this.emailSvc.templatesAdd(name, body);
+    this.emailTemplates.set(await this.emailSvc.templatesList());
+    this.newTemplateName = '';
+    this.newTemplateBody = '';
+  }
+
+  async removeTemplate(id: number): Promise<void> {
+    await this.emailSvc.templatesRemove(id);
+    this.emailTemplates.set(await this.emailSvc.templatesList());
+  }
+
+  catColor(category: string): string {
+    const map: Record<string, string> = {
+      newsletter: '#F59E0B', spam: '#EF4444', important: '#3B82F6',
+      receipt: '#22C55E', other: '#6b7488',
+    };
+    return map[category] ?? '#6b7488';
   }
 
   // ── Import Bookmarks ─────────────────────────────────────────────────────

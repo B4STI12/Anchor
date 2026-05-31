@@ -21,7 +21,8 @@
     "test:phase3": "playwright test phase3",
     "test:phase4": "playwright test phase4",
     "test:phase5": "playwright test phase5",
-    "test:phase6": "playwright test phase6"
+    "test:phase6": "playwright test phase6",
+    "test:phase7": "playwright test phase7-features"
   },
   "private": true,
   "packageManager": "npm@11.15.0",

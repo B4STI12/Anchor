@@ -75,9 +75,21 @@ type SaveState = 'idle' | 'saving' | 'saved';
   <div class="note-list">
     <div class="panel-header">
       <span class="panel-label">{{ listLabel() }}</span>
-      <button class="icon-btn" title="New note" (click)="newNote()">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
-      </button>
+      <div class="new-note-wrap">
+        <button class="icon-btn" title="New blank note (Ctrl+N)" (click)="newNote()">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+        </button>
+        <button class="icon-btn tmpl-btn" title="New from template" (click)="templateMenuOpen.update(v=>!v); $event.stopPropagation()">
+          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+        </button>
+        @if (templateMenuOpen()) {
+          <div class="template-menu an-pop">
+            @for (t of noteTemplates; track t.id) {
+              <button (click)="newNoteFromTemplate(t); $event.stopPropagation()">{{ t.label }}</button>
+            }
+          </div>
+        }
+      </div>
     </div>
 
     <div class="search-wrap">
@@ -127,6 +139,14 @@ type SaveState = 'idle' | 'saving' | 'saved';
         <span class="save-indicator" [class.visible]="saveState() !== 'idle'">
           {{ saveState() === 'saving' ? 'Saving…' : 'Saved' }}
         </span>
+        <button class="export-btn" title="Export as Markdown" (click)="exportMarkdown()">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          .md
+        </button>
+        <button class="export-btn" title="Export as PDF" (click)="exportPdf()">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          .pdf
+        </button>
       </div>
 
       <div class="toolbar">
@@ -302,6 +322,36 @@ type SaveState = 'idle' | 'saving' | 'saved';
       transition: opacity .2s;
     }
     .save-indicator.visible { opacity: 1; }
+
+    .export-btn {
+      display: flex; align-items: center; gap: 4px;
+      padding: 3px 9px; border-radius: 6px;
+      border: 1px solid var(--border); background: transparent;
+      color: var(--muted); font-size: 11.5px; font-weight: 600;
+      cursor: pointer; transition: background .12s, color .12s;
+    }
+    .export-btn:hover { background: var(--hover); color: var(--text); }
+
+    .new-note-wrap { position: relative; display: flex; gap: 1px; }
+    .tmpl-btn { width: 18px !important; }
+    .template-menu {
+      position: absolute; top: 28px; right: 0;
+      background: var(--panel); border: 1px solid var(--border);
+      border-radius: 8px; padding: 4px; min-width: 160px;
+      z-index: 200; box-shadow: 0 10px 30px rgba(0,0,0,.4);
+    }
+    .template-menu button {
+      display: block; width: 100%; padding: 7px 10px;
+      text-align: left; background: transparent; border: none;
+      border-radius: 6px; color: var(--text); font-size: 13px;
+      cursor: pointer; transition: background .1s;
+    }
+    .template-menu button:hover { background: var(--hover); }
+
+    @media print {
+      body > * { display: none !important; }
+      .print-only { display: block !important; }
+    }
 
     /* ── Toolbar ── */
     .toolbar {
@@ -754,6 +804,37 @@ export class NotesComponent implements OnInit, AfterViewInit, OnDestroy {
   newFolderParentId = signal<string | null>(null);
   contextMenu = signal<{ x: number; y: number; folder: Folder } | null>(null);
 
+  // Templates
+  templateMenuOpen = signal(false);
+  readonly noteTemplates = [
+    { id: 'blank',   label: 'Blank note',    content: null },
+    { id: 'meeting', label: 'Meeting notes', content: {
+        type: 'doc', content: [
+          { type: 'heading', attrs: { level: 1 }, content: [{ type: 'text', text: 'Meeting Notes' }] },
+          { type: 'paragraph', content: [{ type: 'text', text: `Date: ${new Date().toLocaleDateString()}` }] },
+          { type: 'heading', attrs: { level: 2 }, content: [{ type: 'text', text: 'Attendees' }] },
+          { type: 'bulletList', content: [{ type: 'listItem', content: [{ type: 'paragraph', content: [{ type: 'text', text: '' }] }] }] },
+          { type: 'heading', attrs: { level: 2 }, content: [{ type: 'text', text: 'Agenda' }] },
+          { type: 'bulletList', content: [{ type: 'listItem', content: [{ type: 'paragraph', content: [{ type: 'text', text: '' }] }] }] },
+          { type: 'heading', attrs: { level: 2 }, content: [{ type: 'text', text: 'Action Items' }] },
+          { type: 'bulletList', content: [{ type: 'listItem', content: [{ type: 'paragraph', content: [{ type: 'text', text: '' }] }] }] },
+        ],
+      },
+    },
+    { id: 'daily', label: 'Daily log', content: {
+        type: 'doc', content: [
+          { type: 'heading', attrs: { level: 1 }, content: [{ type: 'text', text: new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }) }] },
+          { type: 'heading', attrs: { level: 2 }, content: [{ type: 'text', text: 'Today\'s goals' }] },
+          { type: 'bulletList', content: [{ type: 'listItem', content: [{ type: 'paragraph', content: [{ type: 'text', text: '' }] }] }] },
+          { type: 'heading', attrs: { level: 2 }, content: [{ type: 'text', text: 'Notes' }] },
+          { type: 'paragraph', content: [{ type: 'text', text: '' }] },
+          { type: 'heading', attrs: { level: 2 }, content: [{ type: 'text', text: 'Done today' }] },
+          { type: 'bulletList', content: [{ type: 'listItem', content: [{ type: 'paragraph', content: [{ type: 'text', text: '' }] }] }] },
+        ],
+      },
+    },
+  ] as const;
+
   // Save-to-notes
   saveToNotesText = signal('');
   saveToNotesPos = signal({ x: 0, y: 0 });
@@ -863,6 +944,11 @@ export class NotesComponent implements OnInit, AfterViewInit, OnDestroy {
     this.onSelectionChange();
   }
 
+  @HostListener('document:click')
+  onDocClick() {
+    this.templateMenuOpen.set(false);
+  }
+
   @HostListener('document:keydown', ['$event'])
   onKeyDown(e: KeyboardEvent) {
     if (e.ctrlKey && e.key === 'n' && !e.shiftKey && !e.altKey) {
@@ -873,6 +959,7 @@ export class NotesComponent implements OnInit, AfterViewInit, OnDestroy {
       }
     }
     if (e.key === 'Escape') {
+      this.templateMenuOpen.set(false);
       this.closeContextMenu();
       this.closeFolderModal();
     }
@@ -902,10 +989,91 @@ export class NotesComponent implements OnInit, AfterViewInit, OnDestroy {
 
   async newNote() {
     this.flushSave();
+    this.templateMenuOpen.set(false);
     const fid = this.selectedFolderId();
     const folderId = fid === '__all__' || fid === '__unfiled__' ? null : fid;
     const note = await this.noteService.createNote(folderId);
     if (note) this.selectNote(note);
+  }
+
+  async newNoteFromTemplate(t: { id: string; label: string; content: any }) {
+    this.flushSave();
+    this.templateMenuOpen.set(false);
+    const fid = this.selectedFolderId();
+    const folderId = fid === '__all__' || fid === '__unfiled__' ? null : fid;
+    const title = t.id === 'blank' ? 'Untitled' : t.id === 'daily'
+      ? new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+      : t.label;
+    const note = await this.noteService.createNote(folderId);
+    if (!note) return;
+    if (t.content) {
+      await this.noteService.updateNote(note.id, { title, content: t.content });
+      this.selectNote({ ...note, title, content: t.content });
+    } else {
+      this.selectNote(note);
+    }
+  }
+
+  exportMarkdown(): void {
+    const note = this.selectedNote();
+    if (!note || !this.editor) return;
+    const md = this.tiptapToMd(this.editor.getJSON());
+    const blob = new Blob([md], { type: 'text/markdown' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${this.editorTitle || 'note'}.md`;
+    a.click();
+    URL.revokeObjectURL(url);
+    this.toast.show('Exported as Markdown');
+  }
+
+  exportPdf(): void {
+    const note = this.selectedNote();
+    if (!note || !this.editor) return;
+    const html = this.editor.getHTML();
+    const title = this.editorTitle || 'note';
+    const win = window.open('', '_blank');
+    if (!win) return;
+    win.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>${title}</title>
+      <style>body{font-family:Inter,sans-serif;max-width:720px;margin:40px auto;color:#111;line-height:1.7}
+      h1,h2,h3{margin:16px 0 6px}pre,code{background:#f3f4f6;border-radius:4px;padding:2px 6px;font-size:13px}
+      blockquote{border-left:3px solid #2563eb;margin:8px 0;padding-left:12px;color:#555}</style>
+      </head><body><h1>${title}</h1>${html}</body></html>`);
+    win.document.close();
+    win.focus();
+    win.print();
+    win.close();
+    this.toast.show('PDF print dialog opened');
+  }
+
+  private tiptapToMd(node: any, depth = 0): string {
+    if (!node) return '';
+    if (node.type === 'text') {
+      let t = node.text ?? '';
+      if (node.marks) {
+        for (const m of node.marks) {
+          if (m.type === 'bold') t = `**${t}**`;
+          else if (m.type === 'italic') t = `_${t}_`;
+          else if (m.type === 'strike') t = `~~${t}~~`;
+          else if (m.type === 'code') t = '`' + t + '`';
+        }
+      }
+      return t;
+    }
+    const kids = (node.content ?? []).map((c: any) => this.tiptapToMd(c, depth)).join('');
+    switch (node.type) {
+      case 'doc': return kids;
+      case 'paragraph': return kids ? `${kids}\n\n` : '\n';
+      case 'heading': return `${'#'.repeat(node.attrs?.level ?? 1)} ${kids}\n\n`;
+      case 'bulletList': return kids;
+      case 'orderedList': return kids;
+      case 'listItem': return `${'  '.repeat(depth)}- ${kids.trimEnd()}\n`;
+      case 'blockquote': return kids.split('\n').map((l: string) => `> ${l}`).join('\n') + '\n';
+      case 'codeBlock': return '```\n' + kids + '\n```\n\n';
+      case 'hardBreak': return '\n';
+      default: return kids;
+    }
   }
 
   async togglePin(note: Note) {
