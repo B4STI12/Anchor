@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Anchor</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --bg: #0e1118;
+    --panel: #151926;
+    --panel-2: #11151f;
+    --rail: #0b0e15;
+    --border: #232a3a;
+    --hover: #1b2130;
+    --text: #eef1f7;
+    --dim: #c0c7d4;
+    --muted: #6b7488;
+    --accent: #2563eb;
+    --accent2: #60a5fa;
+    --mono: "JetBrains Mono", ui-monospace, monospace;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; }
+  body {
+    font-family: "Inter", -apple-system, BlinkMacSystemFont, sans-serif;
+    background: #05070c;
+    color: var(--text);
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+    overflow: hidden;
+  }
+  ::-webkit-scrollbar { width: 10px; height: 10px; }
+  ::-webkit-scrollbar-thumb { background: #2a3142; border-radius: 99px; border: 3px solid transparent; background-clip: content-box; }
+  ::-webkit-scrollbar-thumb:hover { background: #3a4357; background-clip: content-box; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  input::placeholder { color: var(--muted); }
+  button { font-family: inherit; }
+  .an-calc-key { transition: filter .1s, transform .05s; }
+  .an-calc-key:hover { filter: brightness(1.15); }
+  .an-calc-key:active { transform: scale(.96); }
+  .an-hist:hover { background: var(--hover) !important; }
+  .an-toast { animation: toastIn .22s cubic-bezier(.2,.9,.3,1.2); }
+  @keyframes toastIn { from { opacity: 0; transform: translateY(10px) scale(.96); } to { opacity: 1; transform: none; } }
+  .an-pop { animation: popIn .14s ease; }
+  @keyframes popIn { from { opacity: 0; transform: translateY(-6px) scale(.985); } to { opacity: 1; transform: none; } }
+  .an-webloader { animation: webload 1.4s ease-in-out infinite; }
+  @keyframes webload { 0% { transform: translateX(-100%); } 100% { transform: translateX(350%); } }
+  @keyframes appIn { from { opacity: 0; transform: scale(.99); } to { opacity: 1; transform: none; } }
+  @keyframes calcFloatIn { from { opacity: 0; transform: translateY(8px) scale(.97); } to { opacity: 1; transform: none; } }
+  .an-calc-close:hover { background: rgba(248,113,113,.16) !important; color: #f87171 !important; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+<script type="text/babel" src="icons.jsx"></script>
+<script type="text/babel" src="data.jsx"></script>
+<script type="text/babel" src="sidebar.jsx"></script>
+<script type="text/babel" src="bundles.jsx"></script>
+<script type="text/babel" src="notes.jsx"></script>
+<script type="text/babel" src="screens.jsx"></script>
+<script type="text/babel" src="settings.jsx"></script>
+<script type="text/babel" src="floatcalc.jsx"></script>
+
+<script type="text/babel" data-presets="react">
+const { useState, useEffect, useCallback, useRef } = React;
+
+function TrafficLights() {
+  return (
+    <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+      {["#ff5f57", "#febc2e", "#28c840"].map((c) => (
+        <span key={c} style={{ width: 12, height: 12, borderRadius: 99, background: c, boxShadow: "inset 0 0 0 .5px rgba(0,0,0,.2)" }} />
+      ))}
+    </div>
+  );
+}
+
+const SCREEN_TITLES = { bundles: "Bundles", browser: "Bundles", notes: "Notes", snippets: "Snippets", calculator: "Calculator", settings: "Settings" };
+
+function App() {
+  const [screen, setScreen] = useState("bundles");
+  const [calcOpen, setCalcOpen] = useState(false);
+  const [profile, setProfile] = useState(window.PROFILES[0]);
+  const [activeLink, setActiveLink] = useState(null);
+  const [paletteOpen, setPaletteOpen] = useState(false);
+  const [toasts, setToasts] = useState([]);
+
+  const toast = useCallback((msg) => {
+    const id = Math.random().toString(36).slice(2);
+    setToasts((t) => [...t, { id, msg }]);
+    setTimeout(() => setToasts((t) => t.filter((x) => x.id !== id)), 2200);
+  }, []);
+
+  const openLink = useCallback((link) => { setActiveLink(link); setScreen("browser"); }, []);
+  const nav = useCallback((s) => { setScreen(s); setActiveLink(null); }, []);
+
+  const switchProfile = useCallback((p) => { setProfile(p); toast("Switched to " + p.name + " profile"); }, [toast]);
+  const addProfile = useCallback(() => toast("Add a new profile"), [toast]);
+
+  useEffect(() => {
+    const h = (e) => {
+      const mod = e.metaKey || e.ctrlKey;
+      if (mod && e.key.toLowerCase() === "k") { e.preventDefault(); setPaletteOpen((o) => !o); return; }
+      if (mod && e.key === "1") { e.preventDefault(); nav("bundles"); }
+      else if (mod && e.key === "2") { e.preventDefault(); nav("notes"); }
+      else if (mod && e.key === "3") { e.preventDefault(); nav("snippets"); }
+      else if (mod && e.key === "4") { e.preventDefault(); setCalcOpen((o) => !o); }
+      else if (mod && e.key === ",") { e.preventDefault(); nav("settings"); }
+      else if (mod && e.key.toLowerCase() === "n") { e.preventDefault(); nav("notes"); toast("New note created"); }
+      else if (e.key === "Escape") { if (screen === "browser") nav("bundles"); }
+    };
+    window.addEventListener("keydown", h);
+    return () => window.removeEventListener("keydown", h);
+  }, [nav, screen, toast]);
+
+  let body;
+  if (screen === "bundles") body = <window.Bundles onOpenLink={openLink} toast={toast} />;
+  else if (screen === "browser") body = <window.EmbeddedBrowser link={activeLink} onBack={() => nav("bundles")} toast={toast} />;
+  else if (screen === "notes") body = <window.Notes toast={toast} />;
+  else if (screen === "snippets") body = <window.Snippets toast={toast} />;
+  else if (screen === "calculator") body = <window.Calculator toast={toast} />;
+  else if (screen === "settings") body = <window.Settings profile={profile} toast={toast} />;
+
+  return (
+    <div style={{ height: "100vh", padding: 22, display: "flex", alignItems: "center", justifyContent: "center", background: "radial-gradient(120% 120% at 50% 0%, #0c1018, #05070c 70%)" }}>
+      <div style={{
+        width: "100%", maxWidth: 1240, height: "100%", maxHeight: 800, borderRadius: 16, overflow: "hidden",
+        background: "var(--bg)", border: "1px solid #2a3242", boxShadow: "0 40px 120px rgba(0,0,0,.7), 0 0 0 1px rgba(255,255,255,.02)",
+        display: "flex", flexDirection: "column", animation: "appIn .3s ease", position: "relative",
+      }}>
+        {/* titlebar */}
+        <div style={{ height: 44, flexShrink: 0, display: "flex", alignItems: "center", gap: 14, padding: "0 16px", borderBottom: "1px solid var(--border)", background: "var(--rail)" }}>
+          <TrafficLights />
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginLeft: 4 }}>
+            <span style={{ fontSize: 13, fontWeight: 700, letterSpacing: "-.01em", color: "var(--text)" }}>Anchor</span>
+            <span style={{ fontSize: 12, color: "var(--muted)" }}>·</span>
+            <span style={{ fontSize: 12.5, color: "var(--dim)", fontWeight: 500 }}>{SCREEN_TITLES[screen]}</span>
+          </div>
+          <div style={{ flex: 1, display: "flex", justifyContent: "center" }}>
+            <button onClick={() => setPaletteOpen(true)} style={{
+              display: "flex", alignItems: "center", gap: 9, height: 28, padding: "0 11px 0 12px", borderRadius: 8,
+              border: "1px solid var(--border)", background: "var(--panel-2)", color: "var(--muted)", cursor: "pointer",
+              fontSize: 12.5, fontWeight: 500, minWidth: 230,
+            }}>
+              <window.IconSearch size={14} />
+              <span style={{ flex: 1, textAlign: "left" }}>Search or jump to…</span>
+              <kbd style={{ ...window.kbdStyle, marginLeft: 0 }}>⌘K</kbd>
+            </button>
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
+            <window.Dot color={profile.color} size={8} />
+            <span style={{ fontSize: 12.5, color: "var(--dim)", fontWeight: 500 }}>{profile.name}</span>
+          </div>
+        </div>
+        {/* body */}
+        <div style={{ flex: 1, display: "flex", minHeight: 0 }}>
+          <window.Sidebar screen={screen} setScreen={nav} profile={profile} onSwitchProfile={switchProfile} onAddProfile={addProfile} calcOpen={calcOpen} onToggleCalc={() => setCalcOpen((o) => !o)} />
+          <div style={{ flex: 1, minWidth: 0, background: "var(--bg)" }}>{body}</div>
+        </div>
+        <window.FloatingCalculator open={calcOpen} onClose={() => setCalcOpen(false)} toast={toast} />
+      </div>
+      <window.CommandPalette open={paletteOpen} onClose={() => setPaletteOpen(false)} onNav={nav} toast={toast} />
+      <window.ToastHost toasts={toasts} />
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+</script>
+</body>
+</html>

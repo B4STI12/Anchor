@@ -2,9 +2,7 @@ import {
   Component, inject, signal, HostListener, OnInit, OnDestroy,
 } from '@angular/core';
 import { NgFor, NgIf } from '@angular/common';
-import { CalculatorService } from '../../shared/services/calculator.service';
-
-interface HistoryEntry { expr: string; result: string; }
+import { CalculatorService, HistoryEntry } from '../../shared/services/calculator.service';
 
 @Component({
   selector: 'app-calculator',
@@ -108,7 +106,6 @@ interface HistoryEntry { expr: string; result: string; }
       font-size: 18px;
       line-height: 1;
       display: flex; align-items: center; justify-content: center;
-      transition: color .12s, background .12s;
     }
     .calc-close:hover { color: #f87171; background: rgba(248,113,113,.1); }
 
@@ -192,14 +189,13 @@ export class CalculatorComponent implements OnInit, OnDestroy {
 
   private _display = signal('0');
   private _expr = signal('');
-  private _history = signal<HistoryEntry[]>([]);
   private _pendingOp = signal<string | null>(null);
   private _operand = signal<number | null>(null);
   private _justCalc = signal(false);
 
   readonly display = this._display.asReadonly();
   readonly expr = this._expr.asReadonly();
-  readonly history = this._history.asReadonly();
+  readonly history = this.cs.history;
 
   private _posX = signal(80);
   private _posY = signal(120);
@@ -335,6 +331,6 @@ export class CalculatorComponent implements OnInit, OnDestroy {
   }
 
   private pushHistory(expr: string, result: string): void {
-    this._history.update(h => [{ expr, result }, ...h].slice(0, 12));
+    this.cs.pushHistory({ expr, result });
   }
 }

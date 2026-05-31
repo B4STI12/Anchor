@@ -13,11 +13,11 @@ import { ToastService } from '../../shared/services/toast.service';
   <!-- Header -->
   <div class="header">
     <h1 class="page-title">Snippets</h1>
-    <span class="count">{{ snippetService.snippets().length }} saved</span>
+    <span class="count snippets-count">{{ snippetService.snippets().length }} saved</span>
     <div class="spacer"></div>
     <div class="search-bar">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
-      <input class="search-input" placeholder="Search snippets…" [(ngModel)]="searchQuery" />
+      <input class="search-input" placeholder="Search snippets…" [ngModel]="searchQuery()" (ngModelChange)="searchQuery.set($event)" />
     </div>
     <button class="btn-primary" (click)="openNewModal()">
       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
@@ -29,84 +29,84 @@ import { ToastService } from '../../shared/services/toast.service';
   <div class="body">
     <div class="inner">
 
-      @if (addresses().length > 0) {
-        <div class="section-label">Addresses</div>
-        <div class="snippet-grid">
-          @for (s of addresses(); track s.id) {
-            <div class="snippet-card" [class.hov]="hoveredId() === s.id"
-                 (mouseenter)="hoveredId.set(s.id)" (mouseleave)="hoveredId.set(null)">
-              <div class="card-header">
-                <span class="type-icon addr-icon">
-                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12S4 16 4 10a8 8 0 1 1 16 0z"/><circle cx="12" cy="10" r="3"/></svg>
-                </span>
-                <div class="card-meta">
-                  <div class="card-label">{{ s.label }}</div>
-                  <div class="card-sub">{{ s.uses }} uses · Address</div>
-                </div>
-                <button class="copy-btn" [class.copied]="copiedId() === s.id" (click)="copyAll(s)">
-                  @if (copiedId() === s.id) {
-                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
-                    Copied
-                  } @else {
-                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
-                    Copy
-                  }
-                </button>
+      <!-- Addresses section (always shown) -->
+      <div class="section-label">Addresses</div>
+      <div class="snippet-grid">
+        @for (s of addresses(); track s.id) {
+          <div class="snippet-card" [attr.data-type]="'address'" [class.hov]="hoveredId() === s.id"
+               (mouseenter)="hoveredId.set(s.id)" (mouseleave)="hoveredId.set(null)">
+            <div class="card-header">
+              <span class="type-icon addr-icon">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12S4 16 4 10a8 8 0 1 1 16 0z"/><circle cx="12" cy="10" r="3"/></svg>
+              </span>
+              <div class="card-meta">
+                <div class="card-label snippet-label">{{ s.label }}</div>
+                <div class="card-sub snippet-uses">{{ s.uses }} uses · Address</div>
               </div>
-              <div class="fields">
-                @for (f of (s.fields ?? []); track f.k) {
-                  <div class="field-row" (click)="copyField(s, f)">
-                    <span class="field-key">{{ f.k }}</span>
-                    <span class="field-val">{{ f.v }}</span>
-                    <span class="field-copy">
-                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
-                    </span>
-                  </div>
+              <button class="copy-btn copy-all-btn" [class.copied]="copiedId() === s.id" (click)="copyAll(s)">
+                @if (copiedId() === s.id) {
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+                  Copied
+                } @else {
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                  Copy All
                 }
-              </div>
+              </button>
             </div>
-          }
-        </div>
-      }
-
-      @if (customs().length > 0) {
-        <div class="section-label" [style.margin-top]="addresses().length > 0 ? '28px' : '0'">Custom Fields</div>
-        <div class="snippet-grid">
-          @for (s of customs(); track s.id) {
-            <div class="snippet-card" [class.hov]="hoveredId() === s.id"
-                 (mouseenter)="hoveredId.set(s.id)" (mouseleave)="hoveredId.set(null)">
-              <div class="card-header no-border">
-                <span class="type-icon custom-icon">
-                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 8-4 4 4 4"/><path d="m15 8 4 4-4 4"/></svg>
-                </span>
-                <div class="card-meta">
-                  <div class="card-label">{{ s.label }}</div>
-                  <div class="card-sub">{{ s.uses }} uses · Custom</div>
-                </div>
-                <button class="copy-btn" [class.copied]="copiedId() === s.id" (click)="copyAll(s)">
-                  @if (copiedId() === s.id) {
-                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
-                    Copied
-                  } @else {
+            <div class="fields">
+              @for (f of (s.fields ?? []); track f.k) {
+                <div class="field-row" (click)="copyField(s, f)">
+                  <span class="field-key">{{ f.k }}</span>
+                  <span class="field-val">{{ f.v }}</span>
+                  <span class="field-copy copy-icon">
                     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
-                    Copy
-                  }
-                </button>
-              </div>
-              <div class="custom-content">{{ s.content }}</div>
+                  </span>
+                </div>
+              }
             </div>
-          }
-        </div>
-      }
-
-      @if (filtered().length === 0 && !snippetService.loading()) {
-        <div class="empty-state">
-          <div class="empty-icon">
-            <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="var(--accent2)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="m9 8-4 4 4 4"/><path d="m15 8 4 4-4 4"/></svg>
           </div>
-          <h2>No snippets yet</h2>
-          <p>Save addresses, passwords, and custom text for quick copy.</p>
-          <button class="btn-primary" (click)="openNewModal()">New Snippet</button>
+        }
+        @if (addresses().length === 0 && !snippetService.loading()) {
+          <p class="section-empty">No address snippets yet.</p>
+        }
+      </div>
+
+      <!-- Custom section (always shown) -->
+      <div class="section-label" style="margin-top:28px">Custom Fields</div>
+      <div class="snippet-grid">
+        @for (s of customs(); track s.id) {
+          <div class="snippet-card" [attr.data-type]="'custom'" [class.hov]="hoveredId() === s.id"
+               (mouseenter)="hoveredId.set(s.id)" (mouseleave)="hoveredId.set(null)">
+            <div class="card-header no-border">
+              <span class="type-icon custom-icon">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 8-4 4 4 4"/><path d="m15 8 4 4-4 4"/></svg>
+              </span>
+              <div class="card-meta">
+                <div class="card-label snippet-label">{{ s.label }}</div>
+                <div class="card-sub snippet-uses">{{ s.uses }} uses · Custom</div>
+              </div>
+              <button class="copy-btn" [class.copied]="copiedId() === s.id" (click)="copyAll(s)">
+                @if (copiedId() === s.id) {
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+                  Copied
+                } @else {
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                  Copy
+                }
+              </button>
+            </div>
+            <div class="custom-content snippet-content">{{ s.content }}</div>
+          </div>
+        }
+        @if (customs().length === 0 && !snippetService.loading()) {
+          <p class="section-empty">No custom snippets yet.</p>
+        }
+      </div>
+
+      @if (filtered().length === 0 && !snippetService.loading() && searchQuery()) {
+        <div class="empty-state">
+          <h2>No matches</h2>
+          <p>No snippets match "{{ searchQuery() }}".</p>
         </div>
       }
 
@@ -121,12 +121,12 @@ import { ToastService } from '../../shared/services/toast.service';
       <h3 class="modal-title">New Snippet</h3>
 
       <label class="field-label">Label</label>
-      <input class="field-input" placeholder="e.g. Home Address" [(ngModel)]="newLabel" />
+      <input class="field-input" placeholder="Snippet label" [(ngModel)]="newLabel" />
 
       <label class="field-label">Type</label>
       <div class="type-tabs">
-        <button class="type-tab" [class.active]="newType === 'address'" (click)="newType = 'address'">Address</button>
-        <button class="type-tab" [class.active]="newType === 'custom'"  (click)="newType = 'custom'">Custom</button>
+        <button class="type-tab" value="address" [class.active]="newType === 'address'" (click)="newType = 'address'">Address</button>
+        <button class="type-tab" value="custom"  [class.active]="newType === 'custom'"  (click)="newType = 'custom'">Custom</button>
       </div>
 
       @if (newType === 'address') {
@@ -139,12 +139,12 @@ import { ToastService } from '../../shared/services/toast.service';
         <button class="add-field-btn" (click)="addField()">+ Add field</button>
       } @else {
         <label class="field-label">Content</label>
-        <textarea class="field-textarea" placeholder="Paste your snippet content here…" [(ngModel)]="newContent" rows="4"></textarea>
+        <textarea class="field-textarea" placeholder="content or paste here" [(ngModel)]="newContent" rows="4"></textarea>
       }
 
       <div class="modal-actions">
         <button class="btn-secondary" (click)="showModal.set(false)">Cancel</button>
-        <button class="btn-primary" (click)="createSnippet()">Save Snippet</button>
+        <button class="btn-primary" (click)="createSnippet()">Save</button>
       </div>
     </div>
   </div>
@@ -228,6 +228,7 @@ import { ToastService } from '../../shared/services/toast.service';
       border-radius: 8px; white-space: pre-wrap; line-height: 1.5;
     }
 
+    .section-empty { font-size: 13px; color: var(--muted); padding: 8px 4px; margin: 0; }
     .empty-state { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 300px; gap: 14px; text-align: center; }
     .empty-icon { width: 68px; height: 68px; border-radius: 20px; background: rgba(37,99,235,.1); border: 1px solid rgba(37,99,235,.2); display: flex; align-items: center; justify-content: center; }
     .empty-state h2 { margin: 0; font-size: 20px; font-weight: 700; color: var(--text); }
@@ -259,7 +260,7 @@ export class SnippetsComponent implements OnInit {
   readonly snippetService = inject(SnippetService);
   private readonly toast = inject(ToastService);
 
-  searchQuery = '';
+  searchQuery = signal('');
   hoveredId = signal<string | null>(null);
   copiedId = signal<string | null>(null);
 
@@ -270,7 +271,7 @@ export class SnippetsComponent implements OnInit {
   newFields: SnippetField[] = [];
 
   filtered = computed(() => {
-    const q = this.searchQuery.toLowerCase();
+    const q = this.searchQuery().toLowerCase();
     return this.snippetService.snippets().filter(s =>
       !q || s.label.toLowerCase().includes(q) || (s.content ?? '').toLowerCase().includes(q)
     );

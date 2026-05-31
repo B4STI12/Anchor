@@ -2,7 +2,11 @@
  * Phase 1 — Profile switcher: dropdown, switching, toast notification.
  */
 import { test, expect, Page } from '@playwright/test';
-import { loginAsTestUser, hasTestCredentials } from './helpers/auth';
+import { loginAsTestUser, hasTestCredentials, TEST_EMAIL, TEST_PASSWORD } from './helpers/auth';
+import { createClient } from '@supabase/supabase-js';
+
+const SUPABASE_URL = 'https://lwpxbbeuijgqykkdtwtb.supabase.co';
+const SUPABASE_ANON_KEY = 'sb_publishable_QK4eOFMdrApvZiW5P8xpYg_br_4XB8b';
 
 test.describe('Phase 1 · Profile switcher', () => {
 
@@ -11,6 +15,31 @@ test.describe('Phase 1 · Profile switcher', () => {
   let page: Page;
 
   test.beforeAll(async ({ browser }) => {
+    test.setTimeout(60_000);
+
+    // Seed: ensure exactly "Private" and "Work" profiles exist via Supabase SDK
+    const sb = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    await sb.auth.signInWithPassword({ email: TEST_EMAIL, password: TEST_PASSWORD });
+    const { data: { user } } = await sb.auth.getUser();
+    if (user) {
+      const { data: existing } = await sb.from('profiles').select('*').eq('user_id', user.id).order('created_at');
+      const profiles = existing ?? [];
+      const hasPrivate = profiles.some((p: { name: string }) => p.name === 'Private');
+      const hasWork    = profiles.some((p: { name: string }) => p.name === 'Work');
+      // Delete profiles that are neither "Private" nor "Work"
+      const toDelete = profiles.filter((p: { name: string }) => p.name !== 'Private' && p.name !== 'Work');
+      for (const p of toDelete) {
+        await sb.from('profiles').delete().eq('id', p.id);
+      }
+      if (!hasPrivate) {
+        await sb.from('profiles').insert({ user_id: user.id, name: 'Private', color: '#2563eb' });
+      }
+      if (!hasWork) {
+        await sb.from('profiles').insert({ user_id: user.id, name: 'Work', color: '#22c55e' });
+      }
+    }
+    await sb.auth.signOut();
+
     page = await browser.newPage();
     await loginAsTestUser(page);
   });

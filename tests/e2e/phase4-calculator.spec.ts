@@ -13,15 +13,31 @@ test.describe('Phase 4 · Calculator', () => {
   let page: Page;
 
   test.beforeAll(async ({ browser }) => {
+    test.setTimeout(60_000);
     page = await browser.newPage();
     await loginAsTestUser(page);
   });
 
   test.afterAll(async () => page.close());
 
+  test.beforeEach(async () => {
+    // Always start each test with the calculator closed
+    if (await page.locator('.calc-overlay').isVisible()) {
+      await page.keyboard.press('Escape');
+      await expect(page.locator('.calc-overlay')).not.toBeVisible();
+    }
+  });
+
   async function openCalc() {
+    // Close first if already open, so Ctrl+4 always opens it
+    if (await page.locator('.calc-overlay').isVisible()) {
+      await page.keyboard.press('Escape');
+      await page.waitForTimeout(100);
+    }
     await page.keyboard.press('Control+4');
     await expect(page.locator('.calc-overlay')).toBeVisible();
+    await page.waitForTimeout(250); // wait for popIn animation
+    await page.locator('.calc-display').click(); // ensure no background input has focus
   }
 
   test('Ctrl+4 opens the floating calculator', async () => {

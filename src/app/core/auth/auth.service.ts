@@ -29,6 +29,11 @@ export class AuthService {
     return null;
   }
 
+  async changePassword(newPassword: string): Promise<string | null> {
+    const { error } = await this.supabase.client.auth.updateUser({ password: newPassword });
+    return error?.message ?? null;
+  }
+
   async signOut(): Promise<void> {
     await this.supabase.client.auth.signOut();
     await this.router.navigate(['/login']);

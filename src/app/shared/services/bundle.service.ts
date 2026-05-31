@@ -93,6 +93,10 @@ export class BundleService {
     return data ?? null;
   }
 
+  async updateLink(id: string, changes: Partial<Pick<Link, 'label' | 'url'>>): Promise<void> {
+    await this.db.client.from('links').update(changes).eq('id', id);
+  }
+
   async deleteLink(id: string): Promise<void> {
     await this.db.client.from('links').delete().eq('id', id);
   }

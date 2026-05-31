@@ -1,4 +1,4 @@
-import { Component, inject, HostListener, OnInit } from '@angular/core';
+import { Component, inject, HostListener, OnInit, OnDestroy, signal } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
 import { NgIf } from '@angular/common';
 import { TitleCasePipe } from '@angular/common';
@@ -6,6 +6,7 @@ import { SidebarComponent } from '../sidebar/sidebar.component';
 import { ToastComponent } from '../../shared/components/toast/toast.component';
 import { CommandPaletteComponent } from '../../shared/components/command-palette/command-palette.component';
 import { CalculatorComponent } from '../../modules/calculator/calculator.component';
+import { AppLockComponent } from '../../shared/components/app-lock/app-lock.component';
 import { ElectronService } from '../../core/electron/electron.service';
 import { CommandPaletteService } from '../../shared/services/command-palette.service';
 import { CalculatorService } from '../../shared/services/calculator.service';
@@ -15,8 +16,9 @@ import { NavService } from '../../shared/services/nav.service';
 @Component({
   selector: 'app-shell',
   standalone: true,
-  imports: [RouterOutlet, NgIf, SidebarComponent, ToastComponent, CommandPaletteComponent, CalculatorComponent, TitleCasePipe],
+  imports: [RouterOutlet, NgIf, SidebarComponent, ToastComponent, CommandPaletteComponent, CalculatorComponent, AppLockComponent, TitleCasePipe],
   template: `
+    <app-lock-screen *ngIf="locked()" (unlocked)="locked.set(false)"></app-lock-screen>
     <div class="app-frame an-app-in">
 
       <!-- Titlebar -->
@@ -141,20 +143,54 @@ import { NavService } from '../../shared/services/nav.service';
     .content { flex: 1; min-width: 0; background: var(--bg); overflow: hidden; }
   `],
 })
-export class ShellComponent implements OnInit {
-  electron = inject(ElectronService);
-  cp = inject(CommandPaletteService);
+export class ShellComponent implements OnInit, OnDestroy {
+  electron    = inject(ElectronService);
+  cp          = inject(CommandPaletteService);
   calcService = inject(CalculatorService);
-  profile = inject(ProfileService);
-  nav = inject(NavService);
+  profile     = inject(ProfileService);
+  nav         = inject(NavService);
+
+  locked = signal(false);
+
+  private lockTimer: ReturnType<typeof setTimeout> | null = null;
+  private lockMinutes = 0;
 
   async ngOnInit(): Promise<void> {
     await this.profile.load();
+
+    // Listen for lock command from Electron tray
+    this.electron.onAppLock(() => this.locked.set(true));
+
+    // Restore inactivity timeout from localStorage
+    const stored = parseInt(localStorage.getItem('lockTimeout') ?? '0', 10);
+    this.lockMinutes = stored;
+    this.resetInactivityTimer();
   }
 
+  ngOnDestroy(): void {
+    if (this.lockTimer) clearTimeout(this.lockTimer);
+  }
+
+  setLockTimeout(minutes: number): void {
+    this.lockMinutes = minutes;
+    localStorage.setItem('lockTimeout', String(minutes));
+    this.resetInactivityTimer();
+  }
+
+  private resetInactivityTimer(): void {
+    if (this.lockTimer) clearTimeout(this.lockTimer);
+    if (this.lockMinutes > 0) {
+      this.lockTimer = setTimeout(() => this.locked.set(true), this.lockMinutes * 60 * 1000);
+    }
+  }
+
+  @HostListener('document:mousemove')
   @HostListener('document:keydown', ['$event'])
-  onKey(e: KeyboardEvent): void {
-    const mod = e.metaKey || e.ctrlKey;
-    if (mod && e.key.toLowerCase() === 'k') { e.preventDefault(); this.cp.toggle(); }
+  onActivity(e?: KeyboardEvent): void {
+    if (e) {
+      const mod = e.metaKey || e.ctrlKey;
+      if (mod && e.key.toLowerCase() === 'k') { e.preventDefault(); this.cp.toggle(); }
+    }
+    this.resetInactivityTimer();
   }
 }

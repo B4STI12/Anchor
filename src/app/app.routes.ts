@@ -35,6 +35,16 @@ export const routes: Routes = [
         loadComponent: () =>
           import('./settings/settings.component').then(m => m.SettingsComponent),
       },
+      {
+        path: 'email',
+        loadComponent: () =>
+          import('./modules/email/email.component').then(m => m.EmailComponent),
+      },
+      {
+        path: 'email-triad',
+        loadComponent: () =>
+          import('./modules/email-triad/email-triad.component').then(m => m.EmailTriadComponent),
+      },
     ],
   },
   { path: '**', redirectTo: '/login' },

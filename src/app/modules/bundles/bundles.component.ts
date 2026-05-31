@@ -24,8 +24,8 @@ const PRESET_COLORS = ['#2563eb','#22c55e','#f59e0b','#a855f7','#ec4899','#ef444
   <div class="root">
 
     <!-- Left panel: bundle list -->
-    <div class="list-panel">
-      <div class="list-header">
+    <div class="list-panel bundle-list">
+      <div class="list-header bundle-list-header">
         <span class="list-label">Bundles</span>
         <button class="icon-btn" title="New bundle" (click)="openNewBundleModal()">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
@@ -35,9 +35,10 @@ const PRESET_COLORS = ['#2563eb','#22c55e','#f59e0b','#a855f7','#ec4899','#ef444
         @for (b of bundleService.bundles(); track b.id) {
           <button
             cdkDrag
-            class="list-item"
+            class="list-item bundle-list-item"
             [class.active]="activeBundle()?.id === b.id"
             (click)="selectBundle(b)"
+            (contextmenu)="onBundleContextMenu($event, b)"
           >
             <span class="drag-indicator cdkDragHandle">
               <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="9" cy="6" r="1"/><circle cx="9" cy="12" r="1"/><circle cx="9" cy="18" r="1"/><circle cx="15" cy="6" r="1"/><circle cx="15" cy="12" r="1"/><circle cx="15" cy="18" r="1"/></svg>
@@ -61,7 +62,7 @@ const PRESET_COLORS = ['#2563eb','#22c55e','#f59e0b','#a855f7','#ec4899','#ef444
     <!-- Right panel: link grid -->
     <div class="content-panel">
       @if (activeBundle()) {
-        <div class="content-header">
+        <div class="content-header bundle-main-header">
           <span class="dot-lg" [style.background]="activeBundle()!.color"></span>
           <h1 class="bundle-title">{{ activeBundle()!.name }}</h1>
           <span class="link-count">{{ activeLinks().length }} links</span>
@@ -79,7 +80,7 @@ const PRESET_COLORS = ['#2563eb','#22c55e','#f59e0b','#a855f7','#ec4899','#ef444
         } @else if (activeLinks().length === 0) {
           <div class="empty-links">
             <p>No links yet.</p>
-            <button class="btn-primary" (click)="openAddLinkModal()">Add first link</button>
+            <button class="btn-primary" (click)="openAddLinkModal()">New link</button>
           </div>
         } @else {
           <div class="link-grid" cdkDropList cdkDropListOrientation="mixed" (cdkDropListDropped)="onLinkDrop($event)">
@@ -88,7 +89,7 @@ const PRESET_COLORS = ['#2563eb','#22c55e','#f59e0b','#a855f7','#ec4899','#ef444
                 <span class="drag-handle" cdkDragHandle>
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="5" r="1"/><circle cx="9" cy="12" r="1"/><circle cx="9" cy="19" r="1"/><circle cx="15" cy="5" r="1"/><circle cx="15" cy="12" r="1"/><circle cx="15" cy="19" r="1"/></svg>
                 </span>
-                <div class="favicon-wrap">
+                <div class="link-favicon">
                   <img class="favicon" [src]="bundleService.faviconUrl(link.url)" [alt]="link.label"
                        onerror="this.style.display='none'" loading="lazy" />
                 </div>
@@ -147,13 +148,13 @@ const PRESET_COLORS = ['#2563eb','#22c55e','#f59e0b','#a855f7','#ec4899','#ef444
       <button class="nav-btn" title="Copy URL" (click)="copyUrl()">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
       </button>
-      <button class="nav-btn" title="Open in system browser" (click)="openExternal()">
+      <button class="nav-btn" title="Open in external browser" (click)="openExternal()">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
       </button>
     </div>
 
     @if (wvLoading()) {
-      <div class="wv-loadbar an-webload"></div>
+      <div class="wv-loadbar an-webloader"></div>
     }
 
     @if (electronService.isElectron) {
@@ -172,12 +173,30 @@ const PRESET_COLORS = ['#2563eb','#22c55e','#f59e0b','#a855f7','#ec4899','#ef444
   </div>
 }
 
-<!-- ───── Context menu ───── -->
+<!-- ───── Link context menu ───── -->
 @if (contextMenu()) {
   <div class="context-menu" [style.left.px]="contextMenu()!.x" [style.top.px]="contextMenu()!.y" (click)="$event.stopPropagation()">
+    <button class="ctx-item" (click)="openEditLinkModal(contextMenu()!.link)">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+      Edit
+    </button>
     <button class="ctx-item danger" (click)="deleteLink(contextMenu()!.link)">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
-      Delete link
+      Delete
+    </button>
+  </div>
+}
+
+<!-- ───── Bundle context menu ───── -->
+@if (bundleContextMenu()) {
+  <div class="context-menu" [style.left.px]="bundleContextMenu()!.x" [style.top.px]="bundleContextMenu()!.y" (click)="$event.stopPropagation()">
+    <button class="ctx-item" (click)="openEditBundleModal(bundleContextMenu()!.bundle)">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+      Edit
+    </button>
+    <button class="ctx-item danger" (click)="deleteBundle(bundleContextMenu()!.bundle)">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+      Delete
     </button>
   </div>
 }
@@ -188,7 +207,7 @@ const PRESET_COLORS = ['#2563eb','#22c55e','#f59e0b','#a855f7','#ec4899','#ef444
     <div class="modal" (click)="$event.stopPropagation()">
       <h3 class="modal-title">New Bundle</h3>
       <label class="field-label">Name</label>
-      <input class="field-input" placeholder="e.g. Daily Dev" [(ngModel)]="newBundleName" (keydown.enter)="createBundle()" autofocus />
+      <input class="field-input" placeholder="Enter bundle name" [(ngModel)]="newBundleName" (keydown.enter)="createBundle()" autofocus />
       <label class="field-label">Color</label>
       <div class="color-row">
         @for (c of presetColors; track c) {
@@ -212,12 +231,44 @@ const PRESET_COLORS = ['#2563eb','#22c55e','#f59e0b','#a855f7','#ec4899','#ef444
     <div class="modal" (click)="$event.stopPropagation()">
       <h3 class="modal-title">Add Link</h3>
       <label class="field-label">Label</label>
-      <input class="field-input" placeholder="e.g. GitHub" [(ngModel)]="newLinkLabel" />
+      <input class="field-input" placeholder="Link label" [(ngModel)]="newLinkLabel" />
       <label class="field-label">URL</label>
-      <input class="field-input" placeholder="e.g. github.com" [(ngModel)]="newLinkUrl" (keydown.enter)="addLink()" />
+      <input class="field-input" placeholder="https://example.com" [(ngModel)]="newLinkUrl" (keydown.enter)="addLink()" />
       <div class="modal-actions">
         <button class="btn-secondary" (click)="showAddLinkModal.set(false)">Cancel</button>
-        <button class="btn-primary" (click)="addLink()">Add Link</button>
+        <button class="btn-primary" (click)="addLink()">Add</button>
+      </div>
+    </div>
+  </div>
+}
+
+<!-- ───── Edit Link Modal ───── -->
+@if (showEditLinkModal()) {
+  <div class="modal-backdrop" (click)="showEditLinkModal.set(false)">
+    <div class="modal" (click)="$event.stopPropagation()">
+      <h3 class="modal-title">Edit Link</h3>
+      <label class="field-label">Label</label>
+      <input class="field-input" placeholder="Link label" [(ngModel)]="editLinkLabel" />
+      <label class="field-label">URL</label>
+      <input class="field-input" placeholder="https://example.com" [(ngModel)]="editLinkUrl" (keydown.enter)="saveEditLink()" />
+      <div class="modal-actions">
+        <button class="btn-secondary" (click)="showEditLinkModal.set(false)">Cancel</button>
+        <button class="btn-primary" (click)="saveEditLink()">Save</button>
+      </div>
+    </div>
+  </div>
+}
+
+<!-- ───── Edit Bundle Modal ───── -->
+@if (showEditBundleModal()) {
+  <div class="modal-backdrop" (click)="showEditBundleModal.set(false)">
+    <div class="modal" (click)="$event.stopPropagation()">
+      <h3 class="modal-title">Rename Bundle</h3>
+      <label class="field-label">Name</label>
+      <input class="field-input" placeholder="Bundle name" [(ngModel)]="editBundleName" (keydown.enter)="saveEditBundle()" autofocus />
+      <div class="modal-actions">
+        <button class="btn-secondary" (click)="showEditBundleModal.set(false)">Cancel</button>
+        <button class="btn-primary" (click)="saveEditBundle()">Save</button>
       </div>
     </div>
   </div>
@@ -334,7 +385,7 @@ const PRESET_COLORS = ['#2563eb','#22c55e','#f59e0b','#a855f7','#ec4899','#ef444
       transition: opacity .12s;
     }
     .link-card:hover .drag-handle { opacity: .7; }
-    .favicon-wrap { width: 34px; height: 34px; border-radius: 9px; overflow: hidden; flex-shrink: 0; background: var(--panel-2); display: flex; align-items: center; justify-content: center; }
+    .link-favicon { width: 34px; height: 34px; border-radius: 9px; overflow: hidden; flex-shrink: 0; background: var(--panel-2); display: flex; align-items: center; justify-content: center; }
     .favicon { width: 34px; height: 34px; object-fit: contain; }
     .link-info { min-width: 0; flex: 1; }
     .link-label { font-size: 13.5px; font-weight: 600; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -387,7 +438,7 @@ const PRESET_COLORS = ['#2563eb','#22c55e','#f59e0b','#a855f7','#ec4899','#ef444
 
     .wv-loadbar {
       height: 2px; background: linear-gradient(90deg, transparent, var(--accent2), transparent);
-      width: 40%; animation: an-webload 1.4s linear infinite;
+      width: 40%; animation: webload 1.4s ease-in-out infinite;
     }
     webview { flex: 1; width: 100%; display: block; }
 
@@ -487,16 +538,24 @@ export class BundlesComponent implements OnInit, AfterViewChecked {
 
   // Context menu
   contextMenu = signal<{ link: Link; x: number; y: number } | null>(null);
+  bundleContextMenu = signal<{ bundle: Bundle; x: number; y: number } | null>(null);
 
   // Modals
   showNewBundleModal = signal(false);
   showAddLinkModal = signal(false);
+  showEditLinkModal = signal(false);
+  showEditBundleModal = signal(false);
 
   // Form fields
   newBundleName = '';
   newBundleColor = '#2563eb';
   newLinkLabel = '';
   newLinkUrl = '';
+  editingLink: Link | null = null;
+  editingBundle: Bundle | null = null;
+  editLinkLabel = '';
+  editLinkUrl = '';
+  editBundleName = '';
 
   readonly presetColors = PRESET_COLORS;
 
@@ -617,7 +676,63 @@ export class BundlesComponent implements OnInit, AfterViewChecked {
 
   onContextMenu(e: MouseEvent, link: Link): void {
     e.preventDefault();
+    this.bundleContextMenu.set(null);
     this.contextMenu.set({ link, x: e.clientX, y: e.clientY });
+  }
+
+  onBundleContextMenu(e: MouseEvent, bundle: Bundle): void {
+    e.preventDefault();
+    this.contextMenu.set(null);
+    this.bundleContextMenu.set({ bundle, x: e.clientX, y: e.clientY });
+  }
+
+  openEditLinkModal(link: Link): void {
+    this.editingLink = link;
+    this.editLinkLabel = link.label;
+    this.editLinkUrl = link.url;
+    this.contextMenu.set(null);
+    this.showEditLinkModal.set(true);
+  }
+
+  openEditBundleModal(bundle: Bundle): void {
+    this.editingBundle = bundle;
+    this.editBundleName = bundle.name;
+    this.bundleContextMenu.set(null);
+    this.showEditBundleModal.set(true);
+  }
+
+  async saveEditLink(): Promise<void> {
+    if (!this.editingLink) return;
+    const label = this.editLinkLabel.trim();
+    const url = this.editLinkUrl.trim();
+    if (!label || !url) return;
+    await this.bundleService.updateLink(this.editingLink.id, { label, url });
+    this.activeLinks.update(ls => ls.map(l => l.id === this.editingLink!.id ? { ...l, label, url } : l));
+    this.showEditLinkModal.set(false);
+    this.toast.show('Link updated');
+  }
+
+  async saveEditBundle(): Promise<void> {
+    if (!this.editingBundle) return;
+    const name = this.editBundleName.trim();
+    if (!name) return;
+    await this.bundleService.updateBundle(this.editingBundle.id, { name });
+    if (this.activeBundle()?.id === this.editingBundle.id) {
+      this.activeBundle.update(b => b ? { ...b, name } : b);
+    }
+    this.showEditBundleModal.set(false);
+    this.toast.show('Bundle renamed');
+  }
+
+  async deleteBundle(bundle: Bundle): Promise<void> {
+    await this.bundleService.deleteBundle(bundle.id);
+    this.bundleContextMenu.set(null);
+    if (this.activeBundle()?.id === bundle.id) {
+      const remaining = this.bundleService.bundles();
+      this.activeBundle.set(remaining.length > 0 ? remaining[0] : null);
+      this.activeLinks.set([]);
+    }
+    this.toast.show('Bundle deleted');
   }
 
   async deleteLink(link: Link): Promise<void> {
@@ -644,14 +759,21 @@ export class BundlesComponent implements OnInit, AfterViewChecked {
   }
 
   @HostListener('document:click')
-  closeContextMenu(): void { this.contextMenu.set(null); }
+  closeContextMenu(): void {
+    this.contextMenu.set(null);
+    this.bundleContextMenu.set(null);
+  }
 
   @HostListener('document:keydown', ['$event'])
   onKey(e: KeyboardEvent): void {
     if (e.key === 'Escape') {
       if (this.view() === 'webview') { this.closeWebview(); return; }
       if (this.showNewBundleModal()) { this.showNewBundleModal.set(false); return; }
-      if (this.showAddLinkModal())   { this.showAddLinkModal.set(false); }
+      if (this.showAddLinkModal())   { this.showAddLinkModal.set(false); return; }
+      if (this.showEditLinkModal())  { this.showEditLinkModal.set(false); return; }
+      if (this.showEditBundleModal()){ this.showEditBundleModal.set(false); return; }
+      if (this.contextMenu())        { this.contextMenu.set(null); return; }
+      if (this.bundleContextMenu())  { this.bundleContextMenu.set(null); }
     }
   }
 }

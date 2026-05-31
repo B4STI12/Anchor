@@ -15,6 +15,7 @@ export async function loginAsTestUser(page: Page): Promise<void> {
       'Example: TEST_EMAIL=you@example.com TEST_PASSWORD=secret npm test'
     );
   }
+  await page.context().grantPermissions(['clipboard-read', 'clipboard-write']);
   await page.goto('/#/login');
   await page.locator('input[name="email"]').fill(TEST_EMAIL);
   await page.locator('input[name="password"]').fill(TEST_PASSWORD);

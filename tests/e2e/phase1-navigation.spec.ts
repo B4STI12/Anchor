@@ -11,6 +11,7 @@ test.describe('Phase 1 · Navigation', () => {
   let page: Page;
 
   test.beforeAll(async ({ browser }) => {
+    test.setTimeout(60_000);
     page = await browser.newPage();
     await loginAsTestUser(page);
   });

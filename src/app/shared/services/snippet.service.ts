@@ -65,10 +65,7 @@ export class SnippetService {
     if (!snip) return;
     const uses = snip.uses + 1;
     await this.db.client.from('snippets').update({ uses }).eq('id', id);
-    this._snippets.update(ss =>
-      ss.map(s => s.id === id ? { ...s, uses } : s)
-        .sort((a, b) => b.uses - a.uses)
-    );
+    this._snippets.update(ss => ss.map(s => s.id === id ? { ...s, uses } : s));
   }
 
   async delete(id: string): Promise<void> {

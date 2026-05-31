@@ -63,4 +63,20 @@ export class ProfileService {
     if (data) this._profiles.update(ps => [...ps, data]);
     return data ?? null;
   }
+
+  async updateProfile(id: string, changes: Partial<Pick<Profile, 'name' | 'color'>>): Promise<void> {
+    await this.db.client.from('profiles').update(changes).eq('id', id);
+    this._profiles.update(ps => ps.map(p => p.id === id ? { ...p, ...changes } : p));
+    if (this._active().id === id) this._active.update(p => ({ ...p, ...changes }));
+  }
+
+  async deleteProfile(id: string): Promise<void> {
+    if (this._profiles().length <= 1) return;
+    await this.db.client.from('profiles').delete().eq('id', id);
+    this._profiles.update(ps => ps.filter(p => p.id !== id));
+    if (this._active().id === id) {
+      const remaining = this._profiles();
+      if (remaining.length > 0) this._active.set(remaining[0]);
+    }
+  }
 }

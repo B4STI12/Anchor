@@ -6,6 +6,9 @@ interface ElectronAPI {
   minimize(): void;
   maximize(): void;
   close(): void;
+  getAutoLaunch(): Promise<boolean>;
+  setAutoLaunch(enable: boolean): Promise<void>;
+  onAppLock(cb: () => void): void;
 }
 
 declare global {
@@ -33,4 +36,16 @@ export class ElectronService {
   minimize(): void { this.api?.minimize(); }
   maximize(): void { this.api?.maximize(); }
   close(): void    { this.api?.close(); }
+
+  getAutoLaunch(): Promise<boolean> {
+    return this.api?.getAutoLaunch() ?? Promise.resolve(false);
+  }
+
+  setAutoLaunch(enable: boolean): Promise<void> {
+    return this.api?.setAutoLaunch(enable) ?? Promise.resolve();
+  }
+
+  onAppLock(cb: () => void): void {
+    this.api?.onAppLock(cb);
+  }
 }

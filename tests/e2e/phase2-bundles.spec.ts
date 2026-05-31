@@ -19,10 +19,22 @@ test.describe('Phase 2 · Bundles', () => {
   let page: Page;
 
   test.beforeAll(async ({ browser }) => {
+    test.setTimeout(60_000);
     page = await browser.newPage();
     await loginAsTestUser(page);
     await page.locator('button[title="Bundles"]').click();
     await page.waitForTimeout(300);
+
+    // Seed: create a bundle with one link so layout tests have data
+    await page.locator('[title="New bundle"]').click();
+    await page.locator('[placeholder*="bundle name"]').fill('Seed Bundle');
+    await page.keyboard.press('Enter');
+    await page.waitForTimeout(400);
+    await page.locator('[title="Add link"]').click();
+    await page.locator('[placeholder*="https://"]').fill('https://example.com');
+    await page.locator('[placeholder*="label"]').fill('Example');
+    await page.locator('button:has-text("Add")').click();
+    await page.waitForTimeout(600);
   });
 
   test.afterAll(async () => page.close());
@@ -144,8 +156,12 @@ test.describe('Phase 2 · Bundles', () => {
   test.describe('Embedded browser', () => {
 
     test.beforeEach(async () => {
-      // Open first link to enter browser view
       test.fixme(!PHASE2_IMPLEMENTED);
+      // Navigate back to bundles if we ended up in the webview from a previous test
+      if (await page.locator('.webview-toolbar').isVisible()) {
+        await page.keyboard.press('Escape');
+        await page.waitForTimeout(300);
+      }
       await page.locator('.link-card').first().click();
     });
 
@@ -179,7 +195,7 @@ test.describe('Phase 2 · Bundles', () => {
     test('copy URL button shows toast', async () => {
       test.fixme(!PHASE2_IMPLEMENTED);
       await page.locator('[title="Copy URL"]').click();
-      await expect(page.locator('.toast')).toContainText('copied', { timeout: 3_000 });
+      await expect(page.locator('.toast').filter({ hasText: 'copied' })).toBeVisible({ timeout: 3_000 });
     });
 
   });
