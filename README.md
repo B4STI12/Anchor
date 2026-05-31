@@ -28,8 +28,8 @@ Built with **Electron + Angular + Supabase**.
 | Module | Description |
 |---|---|
 | **Bundles** | Groups of links. Click a card to open the site in the embedded browser, or hit *Open All* to fire them in sequence. |
-| **Embedded browser** | Full Chromium webview inside the app — no X-Frame-Options issues. Back / Forward / Reload / Copy URL / Open externally. |
-| **Notes** | Three-column editor: folder tree → note list → TipTap rich-text editor. Auto-saves every 2 s. Optional DeepL Write integration. |
+| **Embedded browser** | Full Chromium webview inside the app — no X-Frame-Options issues. Back / Forward / Reload / Copy URL / Open externally / **Save current page to any bundle** / Per-domain zoom memory. |
+| **Notes** | Three-column editor: folder tree → note list → TipTap rich-text editor. Auto-saves every 2 s. **Tag chips** below the title, searchable. Export as `.md` or PDF. Templates (blank, meeting, daily log). Optional DeepL Write integration. |
 | **Snippets** | Address cards (per-field copy) and custom text snippets (monospace). Usage counter sorts most-used to the top. |
 | **Calculator** | Floating draggable overlay with keyboard input and calculation history. Appears over any screen. |
 | **Command palette** | `Ctrl/⌘ K` — search bundles, notes, and snippets from anywhere. |
@@ -57,11 +57,13 @@ Built with **Electron + Angular + Supabase**.
 
 | Phase | Status | Contents |
 |---|---|---|
-| **Phase 1** | ✅ Done | Electron + Angular wired, Supabase auth, sidebar shell, CSS design system, command palette stub |
-| **Phase 2** | 🔜 Next | Bundles CRUD + link cards + embedded webview + Snippets full CRUD |
-| **Phase 3** | — | Notes: TipTap editor, folder tree, auto-save, DeepL Write |
-| **Phase 4** | — | Floating calculator, full keyboard shortcuts, drag-to-reorder, toasts, reachability dots |
-| **Phase 5** | — | System tray, app lock, settings (complete), onboarding wizard, import/export |
+| **Phase 1** | ✅ Done | Electron + Angular wired, Supabase auth, sidebar shell, CSS design system |
+| **Phase 2** | ✅ Done | Bundles CRUD, link cards, embedded webview, Snippets full CRUD |
+| **Phase 3** | ✅ Done | Notes: TipTap editor, folder tree, auto-save, DeepL Write, export, templates |
+| **Phase 4** | ✅ Done | Floating calculator, command palette, drag-to-reorder, toasts, reachability dots, zoom, recently visited |
+| **Phase 5** | ✅ Done | System tray, app lock, settings (complete), onboarding wizard, email placeholders |
+| **Phase 6** | ✅ Done | Light theme, note export (.md / .pdf), templates, recently visited, per-domain zoom, email settings, HTML email |
+| **Phase 7** | ✅ Done | Add current URL to bundle (webview toolbar), `?` keyboard shortcut overlay, note tags with chip UI |
 
 ---
 
@@ -160,6 +162,7 @@ create table notes (
   title      text not null default 'Untitled',
   content    jsonb,
   pinned     boolean default false,
+  tags       text[],
   updated_at timestamptz default now()
 );
 
@@ -194,6 +197,14 @@ create policy "own links"     on links     for all using (auth.uid() = (select u
 create policy "own folders"   on folders   for all using (auth.uid() = (select user_id from profiles where id = profile_id));
 create policy "own notes"     on notes     for all using (auth.uid() = (select user_id from profiles where id = profile_id));
 create policy "own snippets"  on snippets  for all using (auth.uid() = (select user_id from profiles where id = profile_id));
+```
+
+### Migrate existing tables
+
+If you already have the schema without the `tags` column on notes:
+
+```sql
+alter table notes add column if not exists tags text[];
 ```
 
 ### Create a user

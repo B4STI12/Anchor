@@ -18,6 +18,7 @@ export interface Note {
   content: any;
   pinned: boolean;
   updated_at: string;
+  tags: string[] | null;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -86,7 +87,7 @@ export class NoteService {
     return data ?? null;
   }
 
-  async updateNote(id: string, changes: Partial<Pick<Note, 'title' | 'content' | 'pinned'>>): Promise<void> {
+  async updateNote(id: string, changes: Partial<Pick<Note, 'title' | 'content' | 'pinned' | 'tags'>>): Promise<void> {
     const now = new Date().toISOString();
     await this.db.client.from('notes').update({ ...changes, updated_at: now }).eq('id', id);
     this._notes.update(ns =>

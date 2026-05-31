@@ -149,6 +149,18 @@ type SaveState = 'idle' | 'saving' | 'saved';
         </button>
       </div>
 
+      <div class="tags-row">
+        @for (tag of editorTags; track tag) {
+          <span class="tag-chip">
+            {{ tag }}
+            <button class="tag-remove" (mousedown)="$event.preventDefault(); removeTag(tag)">×</button>
+          </span>
+        }
+        <input class="tag-input" [(ngModel)]="tagInputValue" placeholder="{{ editorTags.length ? '' : 'Add tags…' }}"
+          (keydown.enter)="$event.preventDefault(); addTag()"
+          (keydown)="addTagIfComma($event)" />
+      </div>
+
       <div class="toolbar">
         <button [class.active]="fmt().bold" title="Bold" (mousedown)="$event.preventDefault(); cmd('toggleBold')"><b>B</b></button>
         <button [class.active]="fmt().italic" title="Italic" (mousedown)="$event.preventDefault(); cmd('toggleItalic')"><i>I</i></button>
@@ -331,6 +343,28 @@ type SaveState = 'idle' | 'saving' | 'saved';
       cursor: pointer; transition: background .12s, color .12s;
     }
     .export-btn:hover { background: var(--hover); color: var(--text); }
+
+    .tags-row {
+      display: flex; align-items: center; flex-wrap: wrap; gap: 5px;
+      padding: 6px 16px; border-bottom: 1px solid var(--border); min-height: 34px;
+    }
+    .tag-chip {
+      display: inline-flex; align-items: center; gap: 3px;
+      background: rgba(37,99,235,.15); color: var(--accent2);
+      border: 1px solid rgba(37,99,235,.3); border-radius: 99px;
+      padding: 2px 8px 2px 9px; font-size: 11.5px; font-weight: 500;
+    }
+    .tag-remove {
+      background: transparent; border: none; color: var(--accent2);
+      cursor: pointer; font-size: 14px; line-height: 1; padding: 0;
+      opacity: .6; transition: opacity .1s;
+    }
+    .tag-remove:hover { opacity: 1; }
+    .tag-input {
+      background: transparent; border: none; outline: none;
+      font-size: 12.5px; color: var(--dim); flex: 1; min-width: 80px;
+    }
+    .tag-input::placeholder { color: var(--muted); font-style: italic; }
 
     .new-note-wrap { position: relative; display: flex; gap: 1px; }
     .tmpl-btn { width: 18px !important; }
@@ -842,6 +876,10 @@ export class NotesComponent implements OnInit, AfterViewInit, OnDestroy {
   // Note list
   searchQuery = '';
 
+  // Tags
+  editorTags: string[] = [];
+  tagInputValue = '';
+
   folderRows = computed<FolderRow[]>(() => {
     const rows: FolderRow[] = [];
     const build = (parentId: string | null, depth: number) => {
@@ -870,7 +908,8 @@ export class NotesComponent implements OnInit, AfterViewInit, OnDestroy {
     if (q) {
       notes = notes.filter(n =>
         n.title.toLowerCase().includes(q) ||
-        (n.content ? JSON.stringify(n.content).toLowerCase().includes(q) : false)
+        (n.content ? JSON.stringify(n.content).toLowerCase().includes(q) : false) ||
+        (n.tags ?? []).some(t => t.toLowerCase().includes(q))
       );
     }
     return [...notes.filter(n => n.pinned), ...notes.filter(n => !n.pinned)];
@@ -975,6 +1014,8 @@ export class NotesComponent implements OnInit, AfterViewInit, OnDestroy {
     this.flushSave();
     this.selectedNote.set(note);
     this.editorTitle = note.title;
+    this.editorTags = note.tags ?? [];
+    this.tagInputValue = '';
     if (this.editor) {
       this.editor.setEditable(true);
       this.editor.commands.setContent(note.content ?? '');
@@ -1101,6 +1142,7 @@ export class NotesComponent implements OnInit, AfterViewInit, OnDestroy {
     await this.noteService.updateNote(note.id, {
       title: this.editorTitle || 'Untitled',
       content: content ?? this.editor?.getJSON(),
+      tags: this.editorTags,
     });
     this.saveState.set('saved');
     this.savedTimer = setTimeout(() => this.saveState.set('idle'), 2000);
@@ -1115,6 +1157,7 @@ export class NotesComponent implements OnInit, AfterViewInit, OnDestroy {
         this.noteService.updateNote(note.id, {
           title: this.editorTitle || 'Untitled',
           content: this.editor?.getJSON(),
+          tags: this.editorTags,
         });
       }
     }
@@ -1239,6 +1282,26 @@ export class NotesComponent implements OnInit, AfterViewInit, OnDestroy {
 
   cancelRename() {
     this.renamingId.set(null);
+  }
+
+  // ── Tags ─────────────────────────────────────────────────────────────────────
+
+  addTag(): void {
+    const val = this.tagInputValue.trim();
+    if (val && !this.editorTags.includes(val)) {
+      this.editorTags = [...this.editorTags, val];
+      this.scheduleSave(this.editor?.getJSON());
+    }
+    this.tagInputValue = '';
+  }
+
+  addTagIfComma(e: KeyboardEvent): void {
+    if (e.key === ',') { e.preventDefault(); this.addTag(); }
+  }
+
+  removeTag(tag: string): void {
+    this.editorTags = this.editorTags.filter(t => t !== tag);
+    this.scheduleSave(this.editor?.getJSON());
   }
 
   // ── Helpers ─────────────────────────────────────────────────────────────────

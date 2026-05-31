@@ -64,6 +64,27 @@ import { NavService } from '../../shared/services/nav.service';
     <app-toast></app-toast>
     <app-command-palette></app-command-palette>
     <app-calculator *ngIf="calcService.open()"></app-calculator>
+
+    @if (showShortcuts()) {
+      <div class="shortcuts-overlay" (click)="showShortcuts.set(false)">
+        <div class="shortcuts-modal" (click)="$event.stopPropagation()">
+          <div class="sc-header">
+            <span class="sc-title">Keyboard Shortcuts</span>
+            <button class="sc-close" (click)="showShortcuts.set(false)">×</button>
+          </div>
+          <table class="sc-table">
+            <tbody>
+              <tr><td><kbd>Ctrl K</kbd></td><td>Open command palette</td></tr>
+              <tr><td><kbd>Ctrl N</kbd></td><td>New note</td></tr>
+              <tr><td><kbd>Ctrl 4</kbd></td><td>Toggle calculator</td></tr>
+              <tr><td><kbd>Esc</kbd></td><td>Close webview / modal</td></tr>
+              <tr><td><kbd>↑</kbd> <kbd>↓</kbd> <kbd>Enter</kbd></td><td>Navigate command palette</td></tr>
+              <tr><td><kbd>?</kbd></td><td>Show this overlay</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    }
   `,
   styles: [`
     :host { display: block; height: 100vh; background: #05070c; padding: 22px; display: flex; align-items: center; justify-content: center;
@@ -141,6 +162,40 @@ import { NavService } from '../../shared/services/nav.service';
 
     .body { flex: 1; display: flex; min-height: 0; }
     .content { flex: 1; min-width: 0; background: var(--bg); overflow: hidden; }
+
+    .shortcuts-overlay {
+      position: fixed; inset: 0; z-index: 900;
+      background: rgba(0,0,0,.55);
+      display: flex; align-items: center; justify-content: center;
+    }
+    .shortcuts-modal {
+      background: var(--panel); border: 1px solid var(--border);
+      border-radius: 14px; padding: 20px 26px;
+      min-width: 360px;
+      box-shadow: 0 24px 60px rgba(0,0,0,.6);
+      animation: popIn .12s ease;
+    }
+    .sc-header {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 16px;
+    }
+    .sc-title { font-size: 14px; font-weight: 700; color: var(--text); }
+    .sc-close {
+      width: 26px; height: 26px; border-radius: 6px;
+      border: none; background: transparent;
+      color: var(--muted); font-size: 18px; line-height: 1;
+      cursor: pointer; transition: background .12s, color .12s;
+    }
+    .sc-close:hover { background: var(--hover); color: var(--text); }
+    .sc-table { width: 100%; border-collapse: collapse; }
+    .sc-table td { padding: 7px 0; font-size: 13px; vertical-align: middle; }
+    .sc-table td:first-child { width: 180px; }
+    .sc-table td:last-child { color: var(--dim); }
+    .sc-table kbd {
+      background: var(--bg); border: 1px solid var(--border);
+      border-radius: 5px; padding: 2px 7px; font-size: 11px;
+      font-family: var(--mono); color: var(--text);
+    }
   `],
 })
 export class ShellComponent implements OnInit, OnDestroy {
@@ -151,6 +206,7 @@ export class ShellComponent implements OnInit, OnDestroy {
   nav         = inject(NavService);
 
   locked = signal(false);
+  showShortcuts = signal(false);
 
   private lockTimer: ReturnType<typeof setTimeout> | null = null;
   private lockMinutes = 0;
@@ -190,7 +246,16 @@ export class ShellComponent implements OnInit, OnDestroy {
     if (e) {
       const mod = e.metaKey || e.ctrlKey;
       if (mod && e.key.toLowerCase() === 'k') { e.preventDefault(); this.cp.toggle(); }
+      if (e.key === '?' && !mod && !this.inTextField(e.target as HTMLElement)) {
+        e.preventDefault();
+        this.showShortcuts.update(v => !v);
+      }
+      if (e.key === 'Escape') { this.showShortcuts.set(false); }
     }
     this.resetInactivityTimer();
+  }
+
+  private inTextField(el: HTMLElement): boolean {
+    return el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.isContentEditable;
   }
 }

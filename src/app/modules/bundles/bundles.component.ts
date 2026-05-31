@@ -163,6 +163,9 @@ const PRESET_COLORS = ['#2563eb','#22c55e','#f59e0b','#a855f7','#ec4899','#ef444
       <button class="nav-btn" title="Open in external browser" (click)="openExternal()">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
       </button>
+      <button class="nav-btn" title="Save current URL to bundle" (click)="openSaveToBundleModal()">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
+      </button>
       <div class="nav-sep"></div>
       <button class="nav-btn zoom-btn" title="Zoom out" (click)="zoomOut()">−</button>
       <span class="zoom-label">{{ (wvZoom() * 100).toFixed(0) }}%</span>
@@ -288,6 +291,27 @@ const PRESET_COLORS = ['#2563eb','#22c55e','#f59e0b','#a855f7','#ec4899','#ef444
       <div class="modal-actions">
         <button class="btn-secondary" (click)="showEditBundleModal.set(false)">Cancel</button>
         <button class="btn-primary" (click)="saveEditBundle()">Save</button>
+      </div>
+    </div>
+  </div>
+}
+
+<!-- ───── Save to Bundle Modal (webview) ───── -->
+@if (showSaveToBundleModal()) {
+  <div class="modal-backdrop" (click)="showSaveToBundleModal.set(false)">
+    <div class="modal" (click)="$event.stopPropagation()">
+      <h3 class="modal-title">Save to Bundle</h3>
+      <label class="field-label">Label</label>
+      <input class="field-input" placeholder="Page label" [(ngModel)]="saveToBundleLabel" (keydown.enter)="saveToBundleNow()" autofocus />
+      <label class="field-label">Bundle</label>
+      <select class="field-input field-select" [(ngModel)]="saveToBundleTargetId">
+        @for (b of bundleService.bundles(); track b.id) {
+          <option [value]="b.id">{{ b.name }}</option>
+        }
+      </select>
+      <div class="modal-actions">
+        <button class="btn-secondary" (click)="showSaveToBundleModal.set(false)">Cancel</button>
+        <button class="btn-primary" (click)="saveToBundleNow()">Save</button>
       </div>
     </div>
   </div>
@@ -532,6 +556,7 @@ const PRESET_COLORS = ['#2563eb','#22c55e','#f59e0b','#a855f7','#ec4899','#ef444
       margin-bottom: 16px; transition: border-color .15s;
     }
     .field-input:focus { border-color: rgba(37,99,235,.5); }
+    .field-select { appearance: none; cursor: pointer; }
 
     .color-row { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 20px; }
     .color-swatch {
@@ -587,6 +612,7 @@ export class BundlesComponent implements OnInit, AfterViewChecked {
   showAddLinkModal = signal(false);
   showEditLinkModal = signal(false);
   showEditBundleModal = signal(false);
+  showSaveToBundleModal = signal(false);
 
   // Form fields
   newBundleName = '';
@@ -598,6 +624,8 @@ export class BundlesComponent implements OnInit, AfterViewChecked {
   editLinkLabel = '';
   editLinkUrl = '';
   editBundleName = '';
+  saveToBundleLabel = '';
+  saveToBundleTargetId = '';
 
   readonly presetColors = PRESET_COLORS;
 
@@ -880,6 +908,27 @@ export class BundlesComponent implements OnInit, AfterViewChecked {
       if (this.showEditBundleModal()){ this.showEditBundleModal.set(false); return; }
       if (this.contextMenu())        { this.contextMenu.set(null); return; }
       if (this.bundleContextMenu())  { this.bundleContextMenu.set(null); }
+      if (this.showSaveToBundleModal()) { this.showSaveToBundleModal.set(false); return; }
     }
+  }
+
+  openSaveToBundleModal(): void {
+    const url = this.currentUrl();
+    try { this.saveToBundleLabel = new URL(url).hostname.replace(/^www\./, ''); } catch { this.saveToBundleLabel = url; }
+    this.saveToBundleTargetId = this.activeBundle()?.id ?? this.bundleService.bundles()[0]?.id ?? '';
+    this.showSaveToBundleModal.set(true);
+  }
+
+  async saveToBundleNow(): Promise<void> {
+    const url = this.currentUrl();
+    const label = this.saveToBundleLabel.trim();
+    const bundleId = this.saveToBundleTargetId;
+    if (!label || !bundleId || !url) return;
+    const link = await this.bundleService.createLink(bundleId, label, url);
+    if (link && bundleId === this.activeBundle()?.id) {
+      this.activeLinks.update(ls => [...ls, link]);
+    }
+    this.showSaveToBundleModal.set(false);
+    this.toast.show(`Saved "${label}" to bundle`);
   }
 }
