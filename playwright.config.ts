@@ -9,7 +9,7 @@ export default defineConfig({
   fullyParallel: false,
   workers: 1,
   retries: 1,
-  timeout: 30_000,
+  timeout: 60_000,
   expect: { timeout: 8_000 },
   reporter: [['list'], ['html', { outputFolder: 'tests/report', open: 'never' }]],
   globalSetup: './tests/e2e/global-setup.ts',

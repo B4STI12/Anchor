@@ -87,7 +87,7 @@ test.describe('Phase 1 · Login page', () => {
     await page.locator('input[name="email"]').fill(TEST_EMAIL);
     await page.locator('input[name="password"]').fill(TEST_PASSWORD);
     await page.locator('button[type="submit"]').click();
-    await page.waitForURL(/\/#\/app/, { timeout: 12_000 });
+    await page.waitForURL(/\/#\/app/, { timeout: 30_000 });
     expect(page.url()).toContain('#/app');
   });
 

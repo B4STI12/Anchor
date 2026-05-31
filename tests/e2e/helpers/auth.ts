@@ -12,10 +12,11 @@ export function hasTestCredentials(): boolean {
 }
 
 /**
- * Fast path: injects the saved storageState session into the page context
- * via addInitScript (runs before Angular boots), then navigates to the app.
+ * Navigate to the app as an authenticated user.
  *
- * Falls back to full UI login if the state file doesn't exist yet.
+ * The app uses Supabase with persistSession:false, so sessions live in memory
+ * only and cannot be saved to a storageState file. Each call performs a full
+ * UI login. globalSetup warms the Angular dev server so the login is fast.
  */
 export async function loginAsTestUser(page: Page): Promise<void> {
   if (!hasTestCredentials()) {
@@ -27,25 +28,37 @@ export async function loginAsTestUser(page: Page): Promise<void> {
 
   await page.context().grantPermissions(['clipboard-read', 'clipboard-write']);
 
+  // Check if the saved state has a real session (cookies or localStorage entries).
+  // Since Supabase is configured with persistSession:false the state file will
+  // always be empty — detect this and skip straight to UI login.
+  let hasPersistedSession = false;
   if (fs.existsSync(AUTH_STATE_PATH)) {
+    try {
+      const state = JSON.parse(fs.readFileSync(AUTH_STATE_PATH, 'utf-8')) as {
+        cookies?: Array<unknown>;
+        origins?: Array<{ localStorage?: Array<unknown> }>;
+      };
+      hasPersistedSession =
+        (state.cookies?.length ?? 0) > 0 ||
+        (state.origins?.flatMap(o => o.localStorage ?? []).length ?? 0) > 0;
+    } catch { /* malformed state file — fall through to UI login */ }
+  }
+
+  if (hasPersistedSession) {
     const state = JSON.parse(fs.readFileSync(AUTH_STATE_PATH, 'utf-8')) as {
       cookies: Array<Record<string, unknown>>;
       origins: Array<{ origin: string; localStorage: Array<{ name: string; value: string }> }>;
     };
 
-    // Inject cookies into the context
     if (state.cookies?.length) {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       await page.context().addCookies(state.cookies as any[]);
     }
 
-    // Inject localStorage before Angular initialises (addInitScript runs before any page scripts)
     const localStorageItems = state.origins?.flatMap(o => o.localStorage ?? []) ?? [];
     if (localStorageItems.length) {
       await page.addInitScript((items: Array<{ name: string; value: string }>) => {
-        for (const { name, value } of items) {
-          window.localStorage.setItem(name, value);
-        }
+        for (const { name, value } of items) window.localStorage.setItem(name, value);
       }, localStorageItems);
     }
 
@@ -54,7 +67,7 @@ export async function loginAsTestUser(page: Page): Promise<void> {
     return;
   }
 
-  // Fallback: full UI login (only hit if globalSetup hasn't run yet)
+  // Full UI login (standard path for this app since sessions aren't persisted)
   await page.goto('/#/login');
   await page.locator('input[name="email"]').fill(TEST_EMAIL);
   await page.locator('input[name="password"]').fill(TEST_PASSWORD);
