@@ -18,7 +18,8 @@ test.describe('Phase 2 · Snippets', () => {
     page = await browser.newPage();
     await loginAsTestUser(page);
     await page.locator('button[title="Snippets"]').click();
-    await page.waitForTimeout(300);
+    // Wait for Snippets screen to be fully ready before seeding
+    await page.locator('button:has-text("New Snippet")').waitFor({ state: 'visible', timeout: 15_000 });
 
     // Seed: create an address snippet so address-card tests have data
     await page.locator('button:has-text("New Snippet")').click();

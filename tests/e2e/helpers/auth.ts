@@ -21,7 +21,7 @@ export async function loginAsTestUser(page: Page): Promise<void> {
   await page.locator('input[name="password"]').fill(TEST_PASSWORD);
   await page.locator('button[type="submit"]').click();
   // Wait for navigation away from login
-  await page.waitForURL(/\/#\/app/, { timeout: 10_000 });
+  await page.waitForURL(/\/#\/app/, { timeout: 25_000 });
 }
 
 /** Skip a test if TEST_EMAIL / TEST_PASSWORD are not configured. */

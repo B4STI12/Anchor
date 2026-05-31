@@ -19,6 +19,11 @@ test.describe('Phase 1 · Command palette', () => {
   test.afterAll(async () => page.close());
 
   async function openPalette() {
+    // If already open, close it first (Ctrl+K toggles)
+    if (await page.locator('.palette-modal').isVisible()) {
+      await page.keyboard.press('Escape');
+      await expect(page.locator('.palette-modal')).not.toBeVisible();
+    }
     await page.keyboard.press('Control+k');
     await expect(page.locator('.palette-modal')).toBeVisible();
   }
