@@ -17,26 +17,19 @@ test.describe('Phase 1 · Profile switcher', () => {
   test.beforeAll(async ({ browser }) => {
     test.setTimeout(60_000);
 
-    // Seed: ensure exactly "Private" and "Work" profiles exist via Supabase SDK
+    // Seed: delete ALL profiles and recreate "Private" then "Work" in correct order
     const sb = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
     await sb.auth.signInWithPassword({ email: TEST_EMAIL, password: TEST_PASSWORD });
     const { data: { user } } = await sb.auth.getUser();
     if (user) {
-      const { data: existing } = await sb.from('profiles').select('*').eq('user_id', user.id).order('created_at');
-      const profiles = existing ?? [];
-      const hasPrivate = profiles.some((p: { name: string }) => p.name === 'Private');
-      const hasWork    = profiles.some((p: { name: string }) => p.name === 'Work');
-      // Delete profiles that are neither "Private" nor "Work"
-      const toDelete = profiles.filter((p: { name: string }) => p.name !== 'Private' && p.name !== 'Work');
-      for (const p of toDelete) {
+      const { data: existing } = await sb.from('profiles').select('id').eq('user_id', user.id);
+      for (const p of existing ?? []) {
         await sb.from('profiles').delete().eq('id', p.id);
       }
-      if (!hasPrivate) {
-        await sb.from('profiles').insert({ user_id: user.id, name: 'Private', color: '#2563eb' });
-      }
-      if (!hasWork) {
-        await sb.from('profiles').insert({ user_id: user.id, name: 'Work', color: '#22c55e' });
-      }
+      // Insert in order: Private first → Work second (ensures correct created_at order)
+      await sb.from('profiles').insert({ user_id: user.id, name: 'Private', color: '#2563eb' });
+      await new Promise(r => setTimeout(r, 100)); // small gap to guarantee created_at order
+      await sb.from('profiles').insert({ user_id: user.id, name: 'Work', color: '#22c55e' });
     }
     await sb.auth.signOut();
 

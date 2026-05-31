@@ -117,15 +117,11 @@ test.describe('Phase 2 · Snippets', () => {
   test('copying a snippet increments its uses counter', async () => {
     test.fixme(!PHASE2_IMPLEMENTED);
     const card = page.locator('.snippet-card').first();
-    const before = parseInt(
-      (await card.locator('.snippet-uses').textContent() ?? '0 uses').split(' ')[0], 10
-    );
+    const beforeText = await card.locator('.snippet-uses').textContent() ?? '0 uses';
+    const before = parseInt(beforeText.split(' ')[0], 10);
     await card.locator('.copy-btn, .copy-all-btn').first().click();
-    await page.waitForTimeout(500);
-    const after = parseInt(
-      (await card.locator('.snippet-uses').textContent() ?? '0 uses').split(' ')[0], 10
-    );
-    expect(after).toBe(before + 1);
+    // Wait for the counter to update rather than using a fixed timeout
+    await expect(card.locator('.snippet-uses')).toContainText(`${before + 1} use`, { timeout: 5_000 });
   });
 
   // ── Search ────────────────────────────────────────────────────────────────
@@ -160,13 +156,14 @@ test.describe('Phase 2 · Snippets', () => {
 
   test('creating a custom snippet adds it to the grid', async () => {
     test.fixme(!PHASE2_IMPLEMENTED);
-    const before = await page.locator('.snippet-card[data-type="custom"]').count();
+    const label = `Test token ${Date.now()}`;
     await page.locator('button:has-text("New Snippet")').click();
     await page.locator('.modal [value="custom"]').click();
-    await page.locator('.modal [placeholder*="label"]').fill('Test token');
+    await page.locator('.modal [placeholder*="label"]').fill(label);
     await page.locator('.modal [placeholder*="content"]').fill('abc123');
     await page.locator('.modal button:has-text("Save")').click();
-    await expect(page.locator('.snippet-card[data-type="custom"]')).toHaveCount(before + 1);
+    // Wait for the new card to appear by its unique label
+    await expect(page.locator(`.snippet-card:has-text("${label}")`)).toBeVisible({ timeout: 8_000 });
   });
 
 });
