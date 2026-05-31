@@ -1,5 +1,7 @@
 import { app, BrowserWindow, ipcMain, shell, Tray, Menu, nativeImage, Notification, protocol } from 'electron';
 import * as path from 'path';
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+require('dotenv').config({ path: path.join(app.getAppPath(), '.env') });
 import { getApiKey, setApiKey } from './safe-storage';
 import { startGmailOAuth, refreshGmailToken } from './email-oauth-gmail';
 import { startOutlookOAuth, refreshOutlookToken } from './email-oauth-outlook';
