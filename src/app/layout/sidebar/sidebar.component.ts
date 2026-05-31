@@ -84,16 +84,6 @@ import { CalculatorService } from '../../shared/services/calculator.service';
             <div class="tooltip">Email <span class="badge">⌘5</span></div>
           </button>
         </div>
-        <div class="nav-item-wrap">
-          <button class="nav-btn disabled" disabled title="Email Triad">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
-              <rect x="3" y="4" width="8" height="7" rx="1.5"/>
-              <rect x="13" y="4" width="8" height="7" rx="1.5"/>
-              <rect x="8" y="14" width="8" height="6" rx="1.5"/>
-            </svg>
-            <div class="tooltip">Email Triad <span class="badge">coming soon</span></div>
-          </button>
-        </div>
       </div>
 
       <div class="spacer"></div>
