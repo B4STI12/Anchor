@@ -19,22 +19,24 @@ test.describe('Phase 2 · Bundles', () => {
   let page: Page;
 
   test.beforeAll(async ({ browser }) => {
-    test.setTimeout(60_000);
+    test.setTimeout(90_000);
     page = await browser.newPage();
     await loginAsTestUser(page);
     await page.locator('button[title="Bundles"]').click();
-    await page.waitForTimeout(300);
+    // Wait for profile + bundle data to load
+    await page.waitForTimeout(1000);
 
     // Seed: create a bundle with one link so layout tests have data
     await page.locator('[title="New bundle"]').click();
     await page.locator('[placeholder*="bundle name"]').fill('Seed Bundle');
     await page.keyboard.press('Enter');
-    await page.waitForTimeout(400);
+    // Wait for bundle to be saved and selected (Supabase write + DOM update)
+    await page.locator('[title="Add link"]').waitFor({ state: 'visible', timeout: 15_000 });
     await page.locator('[title="Add link"]').click();
     await page.locator('[placeholder*="https://"]').fill('https://example.com');
     await page.locator('[placeholder*="label"]').fill('Example');
     await page.locator('button:has-text("Add")').click();
-    await page.waitForTimeout(600);
+    await page.waitForTimeout(800);
   });
 
   test.afterAll(async () => page.close());

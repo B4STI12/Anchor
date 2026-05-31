@@ -15,7 +15,7 @@ test.describe('Phase 3 · Notes', () => {
   test.beforeAll(async ({ browser }) => {
     // test.setTimeout() is the only reliable way to set a hook timeout when
     // the hook takes fixture arguments ({ browser }).
-    test.setTimeout(40_000);
+    test.setTimeout(90_000);
 
     page = await browser.newPage();
     await loginAsTestUser(page);

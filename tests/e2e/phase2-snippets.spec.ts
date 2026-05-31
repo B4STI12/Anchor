@@ -14,7 +14,7 @@ test.describe('Phase 2 · Snippets', () => {
   let page: Page;
 
   test.beforeAll(async ({ browser }) => {
-    test.setTimeout(60_000);
+    test.setTimeout(90_000);
     page = await browser.newPage();
     await loginAsTestUser(page);
     await page.locator('button[title="Snippets"]').click();
