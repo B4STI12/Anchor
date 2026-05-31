@@ -109,10 +109,11 @@ test.describe('Phase 1 · Navigation', () => {
     await expect(tooltip).toContainText('Notes');
   });
 
-  test('disabled nav items show "coming soon" badge in tooltip', async () => {
+  test('Email nav button tooltip shows Email label with shortcut', async () => {
     await page.locator('button[title="Email"]').hover();
     const tooltip = page.locator('.nav-item-wrap:has(button[title="Email"]) .tooltip');
-    await expect(tooltip).toContainText('coming soon');
+    await expect(tooltip).toContainText('Email');
+    await expect(tooltip).toContainText('⌘5');
   });
 
 });

@@ -77,16 +77,14 @@ test.describe('Phase 1 · Shell layout', () => {
     await expect(page.locator('button[title="Calculator"]')).toBeVisible();
   });
 
-  test('sidebar Email button is disabled (coming soon)', async () => {
+  test('sidebar Email button is active and navigates to email', async () => {
     const btn = page.locator('button[title="Email"]');
-    await expect(btn).toBeDisabled();
-    await expect(btn).toHaveClass(/disabled/);
+    await expect(btn).toBeVisible();
+    await expect(btn).not.toBeDisabled();
   });
 
-  test('sidebar Email Triad button is disabled (coming soon)', async () => {
-    const btn = page.locator('button[title="Email Triad"]');
-    await expect(btn).toBeDisabled();
-    await expect(btn).toHaveClass(/disabled/);
+  test('sidebar Email Triad button no longer exists', async () => {
+    await expect(page.locator('button[title="Email Triad"]')).toHaveCount(0);
   });
 
   test('sidebar Settings button is present', async () => {

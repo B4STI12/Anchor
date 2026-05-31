@@ -76,7 +76,7 @@ type SaveState = 'idle' | 'saving' | 'saved';
     <div class="panel-header">
       <span class="panel-label">{{ listLabel() }}</span>
       <div class="new-note-wrap">
-        <button class="icon-btn" title="New blank note (Ctrl+N)" (click)="newNote()">
+        <button class="icon-btn" title="New note" (click)="newNote()">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
         </button>
         <button class="icon-btn tmpl-btn" title="New from template" (click)="templateMenuOpen.update(v=>!v); $event.stopPropagation()">
