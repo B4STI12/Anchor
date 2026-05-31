@@ -146,12 +146,12 @@ function getSnoozePresets(): { id: string; label: string; hint: string; ts: numb
           <h2 class="onboarding-title">Connect your first account</h2>
           <p class="onboarding-desc">Email reads, categorizes, and helps you triage — all locally on your machine. Your messages never leave your device.</p>
           <div class="onboarding-btns">
-            <button class="provider-btn" (click)="connectAccount('gmail')">
+            <button class="provider-btn" (click)="startConnect('gmail')">
               <span class="provider-logo gmail-logo">G</span>
               <span>Connect Gmail</span>
               <svg class="chevron" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#6b7488" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
             </button>
-            <button class="provider-btn" (click)="connectAccount('outlook')">
+            <button class="provider-btn" (click)="startConnect('outlook')">
               <span class="provider-logo outlook-logo">O</span>
               <span>Connect Outlook</span>
               <svg class="chevron" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#6b7488" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
@@ -160,6 +160,40 @@ function getSnoozePresets(): { id: string; label: string; hint: string; ts: numb
           @if (accounts().length > 0) {
             <button class="btn-secondary mt-12" (click)="phase.set('app')">Go to inbox →</button>
           }
+        } @else if (onboardingPhase() === 'setup-gmail' || onboardingPhase() === 'setup-outlook') {
+          <h2 class="onboarding-title">OAuth app credentials</h2>
+          <p class="onboarding-desc">
+            @if (onboardingPhase() === 'setup-gmail') {
+              Create a Google Cloud project, enable the Gmail API, and add an OAuth 2.0 Client ID (Desktop app type). Paste the credentials below.
+            } @else {
+              Register an app in Azure AD (Entra), add <code>anchor://oauth/outlook</code> as a redirect URI, and paste the credentials below.
+            }
+          </p>
+          <div class="creds-form">
+            <div class="creds-row">
+              <label class="creds-label">Client ID</label>
+              <input class="creds-input" [(ngModel)]="setupClientId" placeholder="{{ onboardingPhase() === 'setup-gmail' ? 'xxxxx.apps.googleusercontent.com' : 'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx' }}" autocomplete="off" />
+            </div>
+            @if (onboardingPhase() === 'setup-gmail') {
+              <div class="creds-row">
+                <label class="creds-label">Client Secret</label>
+                <input class="creds-input" [(ngModel)]="setupClientSecret" type="password" placeholder="GOCSPX-…" autocomplete="off" />
+              </div>
+            }
+            <div class="creds-hint">
+              @if (onboardingPhase() === 'setup-gmail') {
+                <a class="creds-link" (click)="openExternal('https://console.cloud.google.com/apis/credentials')">Open Google Cloud Console ↗</a>
+              } @else {
+                <a class="creds-link" (click)="openExternal('https://portal.azure.com/#blade/Microsoft_AAD_RegisteredApps/ApplicationsListBlade')">Open Azure App Registrations ↗</a>
+              }
+            </div>
+          </div>
+          <div class="onboarding-btns mt-12">
+            <button class="btn-primary" (click)="saveCredsAndConnect()" [disabled]="!setupClientId.trim() || setupSaving()">
+              {{ setupSaving() ? 'Saving…' : 'Save & Connect' }}
+            </button>
+            <button class="btn-secondary" (click)="onboardingPhase.set('start')">Back</button>
+          </div>
         } @else if (onboardingPhase() === 'loading') {
           <h2 class="onboarding-title">Connecting…</h2>
           <p class="onboarding-desc">A browser window should open. Approve access to continue.</p>
@@ -604,6 +638,19 @@ function getSnoozePresets(): { id: string; label: string; hint: string; ts: numb
     .outlook-logo { background: #0078D4; color: #fff; }
     .chevron { margin-left: auto; }
     .error-banner { margin-bottom: 16px; padding: 8px 12px; background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.3); border-radius: 4px; color: #fca5a5; font-size: 12px; width: 360px; }
+    .creds-form { width: 360px; display: flex; flex-direction: column; gap: 10px; }
+    .creds-row { display: flex; flex-direction: column; gap: 4px; }
+    .creds-label { font-size: 11px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.3px; }
+    .creds-input {
+      width: 100%; padding: 8px 10px; background: var(--panel); border: 1px solid var(--border);
+      border-radius: 6px; color: var(--text); font-size: 13px; font-family: var(--mono); outline: none;
+      transition: border-color .12s;
+    }
+    .creds-input:focus { border-color: var(--accent); }
+    .creds-hint { padding-top: 4px; }
+    .creds-link { font-size: 12px; color: var(--accent2); cursor: pointer; text-decoration: none; }
+    .creds-link:hover { text-decoration: underline; }
+    code { font-family: var(--mono); font-size: 11.5px; background: rgba(255,255,255,0.05); padding: 1px 4px; border-radius: 3px; }
     .connect-status { border: 1px solid var(--border); border-radius: 6px; padding: 20px; display: flex; align-items: center; gap: 12px; background: var(--hover); width: 360px; }
     .connect-label { font-size: 13px; color: var(--text); font-weight: 500; }
     .connect-sub { font-size: 11px; color: var(--muted); margin-top: 2px; }
@@ -922,10 +969,13 @@ export class EmailComponent implements OnInit, OnDestroy {
 
   syncStatus = signal('');
 
-  onboardingPhase = signal<'start' | 'loading' | 'added'>('start');
+  onboardingPhase = signal<'start' | 'loading' | 'added' | 'setup-gmail' | 'setup-outlook'>('start');
   onboardingError = signal<string | null>(null);
   pendingProvider = signal<'gmail' | 'outlook' | null>(null);
   connectedAccount = signal<AccountRecord | null>(null);
+  setupClientId = '';
+  setupClientSecret = '';
+  setupSaving = signal(false);
 
   searchQuery = '';
   private searchDebounce: ReturnType<typeof setTimeout> | null = null;
@@ -1018,6 +1068,49 @@ export class EmailComponent implements OnInit, OnDestroy {
     this.phase.set('onboarding');
   }
 
+  async startConnect(provider: 'gmail' | 'outlook'): Promise<void> {
+    this.onboardingError.set(null);
+    this.pendingProvider.set(provider);
+    try {
+      const creds = await this.emailService.settingsGetOauthCreds();
+      const hasCreds = provider === 'gmail'
+        ? !!(creds.gmailClientId && creds.gmailClientSecret)
+        : !!(creds.outlookClientId);
+      if (!hasCreds) {
+        this.setupClientId = provider === 'gmail' ? (creds.gmailClientId || '') : (creds.outlookClientId || '');
+        this.setupClientSecret = provider === 'gmail' ? (creds.gmailClientSecret || '') : '';
+        this.onboardingPhase.set(provider === 'gmail' ? 'setup-gmail' : 'setup-outlook');
+        return;
+      }
+    } catch {}
+    await this.connectAccount(provider);
+  }
+
+  async saveCredsAndConnect(): Promise<void> {
+    const provider = this.pendingProvider();
+    if (!provider || !this.setupClientId.trim()) return;
+    this.setupSaving.set(true);
+    this.onboardingError.set(null);
+    try {
+      if (provider === 'gmail') {
+        await this.emailService.settingsSetOauthCreds({
+          gmailClientId: this.setupClientId.trim(),
+          gmailClientSecret: this.setupClientSecret.trim(),
+        });
+      } else {
+        await this.emailService.settingsSetOauthCreds({
+          outlookClientId: this.setupClientId.trim(),
+        });
+      }
+    } catch (err: any) {
+      this.onboardingError.set(err.message || 'Failed to save credentials');
+      this.setupSaving.set(false);
+      return;
+    }
+    this.setupSaving.set(false);
+    await this.connectAccount(provider);
+  }
+
   async connectAccount(provider: 'gmail' | 'outlook'): Promise<void> {
     this.pendingProvider.set(provider);
     this.onboardingPhase.set('loading');
@@ -1039,6 +1132,10 @@ export class EmailComponent implements OnInit, OnDestroy {
       this.onboardingPhase.set('start');
     }
     this.pendingProvider.set(null);
+  }
+
+  openExternal(url: string): void {
+    window.open(url, '_blank');
   }
 
   // ─── Navigation ──────────────────────────────────────────────────────────────
