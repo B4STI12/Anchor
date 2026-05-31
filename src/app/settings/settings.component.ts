@@ -133,10 +133,17 @@ const LOCK_OPTIONS = [
       </table>
     </section>
 
-    <!-- ── Export ── -->
+    <!-- ── Data ── -->
     <section class="section">
       <h2>Data</h2>
-      <button class="btn-secondary" (click)="exportData()">Export all data (JSON)</button>
+      <div class="row-inline">
+        <button class="btn-secondary" (click)="exportData()">Export all data (JSON)</button>
+        <label class="btn-secondary file-btn">
+          Import bookmarks (HTML)
+          <input type="file" accept=".html" (change)="importBookmarks($event)" style="display:none" />
+        </label>
+      </div>
+      <p class="note" *ngIf="importStatus()">{{ importStatus() }}</p>
     </section>
 
     <!-- ── Account ── -->
@@ -230,6 +237,7 @@ const LOCK_OPTIONS = [
       cursor: pointer; white-space: nowrap; transition: background .12s, color .12s;
     }
     .btn-secondary:hover { background: var(--hover); color: var(--text); }
+    .file-btn { cursor: pointer; }
 
     .btn-danger {
       align-self: flex-start; height: 34px; padding: 0 14px; border-radius: 8px;
@@ -357,6 +365,9 @@ export class SettingsComponent implements OnInit {
   // Supabase status
   supabaseOk = signal(false);
 
+  // Import status
+  importStatus = signal<string | null>(null);
+
   // App lock
   lockTimeout = parseInt(localStorage.getItem('lockTimeout') ?? '0', 10);
   readonly lockOptions = LOCK_OPTIONS;
@@ -460,6 +471,43 @@ export class SettingsComponent implements OnInit {
   async onAutoLaunchChange(enable: boolean): Promise<void> {
     await this.electron.setAutoLaunch(enable);
     this.toast.show(enable ? 'Anchor will launch at login' : 'Auto-launch disabled');
+  }
+
+  // ── Import Bookmarks ─────────────────────────────────────────────────────
+
+  async importBookmarks(event: Event): Promise<void> {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    if (!file) return;
+
+    const html = await file.text();
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(html, 'text/html');
+    const anchors = Array.from(doc.querySelectorAll('a[href]')) as HTMLAnchorElement[];
+
+    if (anchors.length === 0) {
+      this.importStatus.set('No bookmarks found in file.');
+      return;
+    }
+
+    this.importStatus.set(`Importing ${anchors.length} bookmark(s)…`);
+
+    const bundleName = `Imported ${new Date().toLocaleDateString()}`;
+    const bundle = await this.bundles.createBundle(bundleName, '#6b7488');
+    if (!bundle) { this.importStatus.set('Failed to create bundle.'); return; }
+
+    let count = 0;
+    for (const a of anchors) {
+      const url = a.href;
+      const label = a.textContent?.trim() || url;
+      if (!url.startsWith('http')) continue;
+      await this.bundles.createLink(bundle.id, label, url);
+      count++;
+    }
+
+    input.value = '';
+    this.importStatus.set(`Imported ${count} links into "${bundleName}".`);
+    this.toast.show(`Imported ${count} bookmarks`);
   }
 
   // ── Export ────────────────────────────────────────────────────────────────
